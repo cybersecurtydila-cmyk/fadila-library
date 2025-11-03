@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin - Fadila Libraries</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>.glass{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));backdrop-filter: blur(6px);}</style>
+</head>
+<body class="bg-[#070707] text-zinc-200">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-2xl font-bold">Panneau d'administration — Fadila</h1>
+      <a href="index.html" class="px-4 py-2 rounded bg-[var(--gold,#caa84b)] text-black">Voir le site</a>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="glass p-6 rounded-xl">
+        <h3 class="font-semibold mb-4">Ajouter un livre</h3>
+        <form id="addForm" class="flex flex-col gap-3">
+          <input required name="title" placeholder="Titre" class="bg-transparent border border-zinc-700 px-3 py-2 rounded" />
+          <input required name="author" placeholder="Auteur" class="bg-transparent border border-zinc-700 px-3 py-2 rounded" />
+          <input required name="img" placeholder="URL de l'image" class="bg-transparent border border-zinc-700 px-3 py-2 rounded" />
+          <input required name="price" placeholder="Prix" class="bg-transparent border border-zinc-700 px-3 py-2 rounded" />
+          <button type="submit" class="mt-2 px-4 py-2 rounded bg-[var(--gold,#caa84b)] text-black font-semibold">Ajouter</button>
+        </form>
+      </div>
+
+      <div class="md:col-span-2 glass p-6 rounded-xl">
+        <h3 class="font-semibold mb-4">Livres publiés</h3>
+        <div id="booksTable" class="space-y-3"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // same demo data (replace by API later)
+    let books = JSON.parse(localStorage.getItem('demoBooks')) || [
+      {id:1,title:"Le Petit Prince",author:"Antoine de Saint-Exupéry",price:9.99,img:"https://images.unsplash.com/photo-1524995997946-a1c2e315a42f"},
+      {id:2,title:"Pride and Prejudice",author:"Jane Austen",price:12.5,img:"https://images.unsplash.com/photo-1528207776546-365bb710ee93"}
+    ];
+    const table = document.getElementById('booksTable');
+    function renderAdmin(){
+      table.innerHTML = books.map(b=>`<div class="flex items-center gap-4 p-3 border border-zinc-800 rounded">
+        <img src="${b.img}" class="w-16 h-20 object-cover rounded">
+        <div class="flex-1">
+          <div class="font-semibold">${b.title}</div>
+          <div class="text-sm text-zinc-400">${b.author}</div>
+        </div>
+        <div class="text-[var(--gold,#caa84b)] font-bold">${b.price} €</div>
+        <div class="flex gap-2">
+          <button class="edit btn" data-id="${b.id}">Edit</button>
+          <button class="del btn" data-id="${b.id}">Delete</button>
+        </div>
+      </div>`).join('');
+      document.querySelectorAll('.del').forEach(b=>{
+        b.onclick = e=>{
+          const id = +e.target.dataset.id;
+          books = books.filter(x=>x.id!==id);
+          localStorage.setItem('demoBooks', JSON.stringify(books));
+          renderAdmin();
+        };
+      });
+    }
+    document.getElementById('addForm').onsubmit = e=>{
+      e.preventDefault();
+      const f = Object.fromEntries(new FormData(e.target).entries());
+      const id = books.length ? Math.max(...books.map(x=>x.id))+1 : 1;
+      books.push({id,...f, price: parseFloat(f.price)});
+      localStorage.setItem('demoBooks', JSON.stringify(books));
+      e.target.reset(); renderAdmin();
+    };
+    renderAdmin();
+  </script>
+</body>
+</html>

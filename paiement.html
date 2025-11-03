@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Paiement — Fadila Libraries</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+:root{--gold:#caa84b;}
+body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial;background:#070707;color:#ddd;}
+</style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+<!-- HEADER -->
+<header class="border-b border-zinc-800 p-6 flex justify-between items-center">
+  <h1 class="text-2xl font-extrabold text-[var(--gold)]">💳 Paiement</h1>
+  <a href="panier.html" class="text-sm text-zinc-400 hover:text-white">← Retour au panier</a>
+</header>
+
+<!-- CONTENT -->
+<main class="flex-1 max-w-lg mx-auto w-full p-6">
+  <h2 class="text-xl font-semibold mb-6">Informations de paiement</h2>
+
+  <form id="paymentForm" class="space-y-5 bg-[#0b0b0b] p-6 rounded-lg border border-zinc-800">
+    <div>
+      <label class="block text-sm text-zinc-400 mb-1">Nom complet</label>
+      <input type="text" id="name" required class="w-full p-3 rounded bg-[#121212] border border-zinc-700 focus:border-[var(--gold)] outline-none">
+    </div>
+    <div>
+      <label class="block text-sm text-zinc-400 mb-1">Email</label>
+      <input type="email" id="email" required class="w-full p-3 rounded bg-[#121212] border border-zinc-700 focus:border-[var(--gold)] outline-none">
+    </div>
+    <div>
+      <label class="block text-sm text-zinc-400 mb-1">Numéro de carte (factice)</label>
+      <input type="text" id="card" placeholder="1234 5678 9012 3456" required class="w-full p-3 rounded bg-[#121212] border border-zinc-700 focus:border-[var(--gold)] outline-none">
+    </div>
+    <div class="flex gap-3">
+      <div class="flex-1">
+        <label class="block text-sm text-zinc-400 mb-1">Date d'expiration</label>
+        <input type="text" placeholder="MM/AA" id="exp" required class="w-full p-3 rounded bg-[#121212] border border-zinc-700 focus:border-[var(--gold)] outline-none">
+      </div>
+      <div class="flex-1">
+        <label class="block text-sm text-zinc-400 mb-1">CVC</label>
+        <input type="text" placeholder="123" id="cvc" required class="w-full p-3 rounded bg-[#121212] border border-zinc-700 focus:border-[var(--gold)] outline-none">
+      </div>
+    </div>
+    <button type="submit" class="w-full py-3 bg-[var(--gold)] text-black font-semibold rounded-lg hover:opacity-90">Payer maintenant</button>
+  </form>
+
+  <div id="result" class="mt-6 text-center text-[var(--gold)] hidden">✅ Paiement réussi (mode démo) !</div>
+</main>
+
+<script>
+const form = document.getElementById('paymentForm');
+form.addEventListener('submit', (e)=>{
+  e.preventDefault();
+  document.getElementById('result').classList.remove('hidden');
+  localStorage.removeItem('cart');
+  setTimeout(()=>{ window.location.href = "index.html"; }, 3000);
+});
+</script>
+
+</body>
+</html>
