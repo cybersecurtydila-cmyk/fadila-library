@@ -2,39 +2,18 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Panier — Fadila Libraries</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root { --gold: #caa84b; }
-    body { font-family: 'Inter', sans-serif; background-color: #070707; color: #eee; }
-    .glass { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); backdrop-filter: blur(6px); }
+    :root { --gold:#caa84b; }
+    body { background-color:#070707; color:#eee; font-family:'Inter',sans-serif; }
   </style>
 </head>
-<body class="p-6">
-
-  <!-- En-tête -->
-  <header class="flex justify-between items-center border-b border-zinc-800 pb-4 mb-8">
-    <h1 class="text-2xl font-extrabold text-[var(--gold)]">Fadila <span class="text-white">Libraries</span></h1>
-    <nav class="flex gap-6 text-sm text-zinc-300">
-      <a href="index.html" class="hover:text-white">Accueil</a>
-      <a href="panier.html" class="hover:text-white">Panier</a>
-    </nav>
-  </header>
-
-  <main class="max-w-5xl mx-auto">
-    <h2 class="text-3xl font-bold mb-6">Votre Panier</h2>
-    <div id="cartContainer" class="flex flex-col gap-4"></div>
-    <div class="mt-6 flex justify-between items-center">
-      <div class="text-xl font-bold">Total: <span id="totalPrice">0 €</span></div>
-      <button id="checkoutBtn" class="px-6 py-2 rounded-full bg-[var(--gold)] text-black font-semibold">Payer tout</button>
-    </div>
-  </main>
-
-  <footer class="border-t border-zinc-800 mt-12 pt-6 text-zinc-500 text-sm text-center">
-    © 2025 Fadila Libraries — Tous droits réservés
-  </footer>
+<body class="min-h-screen p-6">
+  <h1 class="text-3xl font-bold text-[var(--gold)] mb-6">🛍️ Mon Panier</h1>
+  <div id="panierItems" class="grid gap-4"></div>
+  <button onclick="window.location.href='payment.html'" class="mt-8 bg-[var(--gold)] text-black px-6 py-2 rounded font-semibold">Procéder au paiement</button>
 
   <script src="panier.js"></script>
 </body>

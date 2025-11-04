@@ -18,73 +18,82 @@ body{font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,"He
 
 <!-- NAV -->
 <header class="w-full border-b border-zinc-800">
-  <div class="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
-    <div class="flex items-center gap-4">
-      <div class="text-2xl font-extrabold text-[var(--gold)]">Fadila <span class="text-white">Libraries</span></div>
-      <nav class="hidden md:flex gap-6 text-sm text-zinc-300">
-        <a class="hover:text-white" href="accueil.html">Accueil</a>
-        <a class="hover:text-white" href="#catalog">Romans FR</a>
-        <a class="hover:text-white" href="#catalog">English</a>
-        <a class="hover:text-white" href="#catalog">Nouveautés</a>
-        <a class="hover:text-white" href="panier.html">Panier</a>
-      </nav>
-    </div>
-    <div class="flex gap-3 items-center">
-      <button id="searchBtn" class="px-4 py-2 rounded-full border border-zinc-700 text-sm hover:bg-zinc-800">Recherche</button>
-      <a href="admin.html" class="px-4 py-2 rounded-full bg-[var(--gold)] text-black text-sm font-semibold">Admin</a>
-    </div>
-  </div>
+ <div class="max-w-7xl mx-auto px-6 py-6 flex items-center justify-between">
+   <div class="flex items-center gap-4">
+     <div class="text-2xl font-extrabold text-[var(--gold)]">Fadila <span class="text-white">Libraries</span></div>
+     <nav class="hidden md:flex gap-6 text-sm text-zinc-300">
+       <a class="hover:text-white" href="index.html">Accueil</a>
+       <a class="hover:text-white" href="#catalog">Romans FR</a>
+       <a class="hover:text-white" href="#catalog">English</a>
+       <a class="hover:text-white" href="#catalog">Nouveautés</a>
+       <a class="hover:text-white" href="panier.html">Panier</a>
+     </nav>
+   </div>
+   <div class="flex gap-3 items-center">
+     <button id="searchBtn" class="px-4 py-2 rounded-full border border-zinc-700 text-sm hover:bg-zinc-800">Recherche</button>
+     <a href="login.html" class="px-4 py-2 rounded-full bg-[var(--gold)] text-black text-sm font-semibold">Login</a>
+   </div>
+ </div>
 </header>
 
 <!-- HERO -->
 <section class="max-w-7xl mx-auto px-6 py-16 flex flex-col md:flex-row gap-10 items-center">
-  <div class="md:w-6/12">
-    <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">Collection exclusive de <span class="text-[var(--gold)]">romans & livres</span></h1>
-    <p class="mt-6 text-zinc-300 max-w-xl">Sélection soignée pour les lecteurs exigeants — romans français & english. Design sombre, navigation fluide, expérience haut de gamme.</p>
-    <div class="mt-8 flex gap-4">
-      <a href="#catalog" class="px-6 py-3 rounded-full bg-[var(--gold)] text-black font-semibold shadow">Explorer la collection</a>
-      <button id="demoPay" class="px-6 py-3 rounded-full border border-zinc-700 text-sm hover:bg-zinc-800">Paiement demo</button>
-    </div>
-    <div class="mt-8 flex gap-4 text-sm text-zinc-400">
-      <div>📦 Livraison rapide</div>
-      <div>🔒 Paiement sécurisé</div>
-    </div>
-  </div>
+ <div class="md:w-6/12">
+   <h1 class="text-5xl md:text-6xl font-extrabold leading-tight">Collection exclusive de <span class="text-[var(--gold)]">romans & livres</span></h1>
+   <p class="mt-6 text-zinc-300 max-w-xl">Sélection soignée pour les lecteurs exigeants — romans français & english. Design sombre, navigation fluide, expérience haut de gamme.</p>
+   <div class="mt-8 flex gap-4">
+     <a href="#catalog" class="px-6 py-3 rounded-full bg-[var(--gold)] text-black font-semibold shadow">Explorer la collection</a>
+     <button id="demoPay" class="px-6 py-3 rounded-full border border-zinc-700 text-sm hover:bg-zinc-800">Paiement demo</button>
+   </div>
+   <div class="mt-8 flex gap-4 text-sm text-zinc-400">
+     <div>📦 Livraison rapide</div>
+     <div>🔒 Paiement sécurisé</div>
+   </div>
+ </div>
 
-  <!-- FEATURE CARD -->
-  <div class="md:w-6/12 grid grid-cols-2 gap-4" id="grid">
-    <!-- سيتم حقن البطاقات بواسطة JS -->
-  </div>
+ <!-- FEATURE CARD -->
+ <div class="md:w-6/12 grid grid-cols-2 gap-4" id="grid"></div>
 </section>
 
 <!-- FOOTER -->
 <footer class="border-t border-zinc-800 py-8 mt-8">
-  <div class="max-w-7xl mx-auto px-6 text-zinc-400 flex justify-between">
-    <div>© 2025 Fadila Libraries</div>
-    <div>Designed with ❤️</div>
-  </div>
+ <div class="max-w-7xl mx-auto px-6 text-zinc-400 flex justify-between">
+   <div>© 2025 Fadila Libraries</div>
+   <div>Designed with ❤️</div>
+ </div>
 </footer>
 
-<!-- Modal template -->
+<!-- Modals -->
+<!-- Details -->
 <div id="modal" class="fixed inset-0 hidden z-50 items-center justify-center bg-black/60">
-  <div class="bg-[#0b0b0b] rounded-xl max-w-2xl w-full p-6 glass">
-    <div class="flex justify-between items-start">
-      <h3 id="modalTitle" class="text-xl font-semibold"></h3>
-      <button id="closeModal" class="text-zinc-400">✕</button>
+ <div class="bg-[#0b0b0b] rounded-xl max-w-2xl w-full p-6 glass">
+   <div class="flex justify-between items-start">
+     <h3 id="modalTitle" class="text-xl font-semibold"></h3>
+     <button id="closeModal" class="text-zinc-400">✕</button>
+   </div>
+   <div id="modalBody" class="mt-4"></div>
+   <div class="mt-6 flex justify-end gap-3">
+     <button id="modalBuy" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Acheter</button>
+     <button id="modalCancel" class="px-4 py-2 rounded border border-zinc-700">Fermer</button>
+   </div>
+ </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="paymentModal" class="fixed inset-0 hidden z-50 items-center justify-center bg-black/60">
+  <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass">
+    <div class="flex justify-between items-center mb-4">
+      <h3 id="paymentModalTitle" class="text-xl font-semibold"></h3>
+      <button id="closePaymentModal" class="text-zinc-400">✕</button>
     </div>
-    <div id="modalBody" class="mt-4"></div>
-    <div class="mt-6 flex justify-end gap-3">
-      <button id="modalBuy" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Acheter</button>
-      <button id="modalCancel" class="px-4 py-2 rounded border border-zinc-700">Fermer</button>
+    <input type="text" id="cardNumberInput" placeholder="Entrez le numéro de carte" class="w-full p-2 rounded border border-zinc-700 bg-[#121212] text-white">
+    <div class="mt-4 flex justify-end gap-3">
+      <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-green-600 text-white font-semibold">Payer</button>
+      <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Annuler</button>
     </div>
   </div>
 </div>
 
-<!-- ✅ هنا في الأسفل -->
-<script>
-  console.log("✅ Le fichier main.js est sur le point d'être chargé...");
-</script>
 <script src="main.js"></script>
-
 </body>
 </html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Fadila Libraries</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { --gold: #caa84b; }
+    body { font-family: 'Inter', sans-serif; background-color: #070707; color: #eee; }
+  </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
+
+  <div class="bg-[#0b0b0b] glass p-8 rounded-2xl w-full max-w-md border border-zinc-800">
+    <h2 class="text-2xl font-bold mb-6 text-center text-[var(--gold)]">Fadila Libraries</h2>
+
+    <div class="flex justify-center mb-6">
+      <button id="loginTab" class="px-4 py-2 border-b-2 border-[var(--gold)]">Connexion</button>
+      <button id="registerTab" class="px-4 py-2 text-zinc-400">Créer un compte</button>
+    </div>
+
+    <form id="loginForm">
+      <input type="text" id="loginUser" placeholder="Nom d'utilisateur" class="w-full mb-3 px-3 py-2 rounded bg-zinc-900 border border-zinc-700">
+      <input type="password" id="loginPass" placeholder="Mot de passe" class="w-full mb-3 px-3 py-2 rounded bg-zinc-900 border border-zinc-700">
+      <button class="w-full bg-[var(--gold)] text-black py-2 rounded font-semibold hover:opacity-90">Connexion</button>
+    </form>
+
+    <form id="registerForm" class="hidden">
+      <input type="text" id="regUser" placeholder="Nom d'utilisateur" class="w-full mb-3 px-3 py-2 rounded bg-zinc-900 border border-zinc-700">
+      <input type="email" id="regEmail" placeholder="Email" class="w-full mb-3 px-3 py-2 rounded bg-zinc-900 border border-zinc-700">
+      <input type="password" id="regPass" placeholder="Mot de passe" class="w-full mb-3 px-3 py-2 rounded bg-zinc-900 border border-zinc-700">
+      <button class="w-full bg-[var(--gold)] text-black py-2 rounded font-semibold hover:opacity-90">Créer un compte</button>
+    </form>
+
+    <p id="msg" class="text-center text-sm mt-4 text-zinc-400"></p>
+  </div>
+
+  <script src="login.js"></script>
+</body>
+</html>

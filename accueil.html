@@ -1,49 +1,27 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accueil — Fadila Libraries</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
-  <style>
-    :root { --gold: #caa84b; }
-    body { font-family: 'Inter', sans-serif; background-color: #070707; color: #eee; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Accueil — Fadila Libraries</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<style>:root{--gold:#caa84b;}.glass { backdrop-filter: blur(6px); background: rgba(255,255,255,0.03); border-radius: 1rem; }</style>
 </head>
-<body class="p-8">
+<body class="bg-[#070707] text-gray-200 p-6">
 
-  <!-- En-tête -->
-  <header class="flex justify-between items-center border-b border-zinc-800 pb-4 mb-8">
-    <h1 class="text-2xl font-extrabold text-[var(--gold)]">Fadila <span class="text-white">Libraries</span></h1>
-    <nav class="flex gap-6 text-sm text-zinc-300">
-      <a href="index.html" class="hover:text-white">Accueil</a>
-      <a href="panier.html" class="hover:text-white">Panier</a>
-      <a href="admin.html" class="hover:text-white">Admin</a>
-    </nav>
-  </header>
+<header class="flex justify-between items-center border-b border-zinc-800 pb-4 mb-8">
+  <h1 class="text-2xl font-extrabold text-[var(--gold)]">Fadila <span class="text-white">Libraries</span></h1>
+  <div class="flex gap-4">
+    <button id="logoutBtn" class="px-3 py-1 rounded bg-red-600 text-white">Déconnexion</button>
+  </div>
+</header>
 
-  <!-- Contenu principal -->
-  <main class="max-w-3xl mx-auto text-center">
-    <h2 class="text-4xl font-bold mb-6">Bienvenue à <span class="text-[var(--gold)]">Fadila Libraries</span></h2>
-    <p class="text-zinc-400 mb-8">
-      Découvrez notre collection exclusive de livres, romans et nouveautés littéraires.
-    </p>
+<main>
+  <h2 class="text-4xl font-bold mb-6">Collection exclusive de livres</h2>
+  <div id="grid" class="grid md:grid-cols-3 sm:grid-cols-2 gap-6 mt-10"></div>
+</main>
 
-    <div class="flex justify-center gap-4">
-      <a href="index.html" class="px-6 py-3 rounded-full bg-[var(--gold)] text-black font-semibold shadow">
-        Explorer la collection
-      </a>
-      <a href="panier.html" class="px-6 py-3 rounded-full border border-zinc-700 hover:bg-zinc-800">
-        Voir le panier
-      </a>
-    </div>
-  </main>
-
-  <!-- Pied de page -->
-  <footer class="border-t border-zinc-800 mt-12 pt-6 text-zinc-500 text-sm text-center">
-    © 2025 Fadila Libraries — Tous droits réservés
-  </footer>
-
+<script src="main.js"></script>
 </body>
 </html>
