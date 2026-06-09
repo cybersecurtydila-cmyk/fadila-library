@@ -1,6 +1,3 @@
-
-
-
 // main.js — لاظهار الكتب، السلة، ومودال الدفع (متوافق مع index.html الأصلي)
 document.addEventListener("DOMContentLoaded", () => {
   // ----- عناصر HTML (نتحقق أولاً من وجودها) -----
@@ -158,11 +155,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function openPaymentModal(book = null) {
     paymentTarget = book;
     if (!paymentModal) return;
-    // اجعل النموذج يحتوي على الحقول المطلوبة
     paymentModal.classList.remove("hidden");
     paymentModal.classList.add("flex");
 
-    // إدراج نموذج داخلي (نبدّله كل مرة لسهولة مراقبة زر Confirm)
     paymentModal.innerHTML = `
       <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass">
         <div class="flex justify-between items-center mb-4">
@@ -183,7 +178,6 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
 
-    // زامن عناصر النموذج لحدثي التأكيد/إلغاء
     const closeBtn = document.getElementById("closePaymentModal");
     const cancelBtn = document.getElementById("cancelPaymentBtn");
     const confirmBtn = document.getElementById("confirmPaymentBtn");
@@ -198,22 +192,48 @@ document.addEventListener("DOMContentLoaded", () => {
       const exp = document.getElementById("payExp").value.trim();
       const cvc = document.getElementById("payCvc").value.trim();
 
-      // تحقق بسيط من الحقول
       if (!name || !email || !card || !exp || !cvc) {
         showToast("Veuillez remplir tous les champs du paiement.", "info");
         return;
       }
-      // محاكاة نجاح الدفع داخل الصفحة (toast)
-      paymentModal.classList.add("hidden");
-      const paidTitle = paymentTarget ? paymentTarget.title : "votre commande";
-      showToast(`✅ Paiement confirmé pour ${paidTitle}`, "success");
 
-      // لو أردنا، يمكننا حفظ الفاتورة أو إضافة سجل - الآن سيتم إضافة إلى cart كـ demo:
-      const cart = getCart();
-      if (paymentTarget) {
-        cart.push(paymentTarget);
-        saveCart(cart);
-      }
+      // ── Fraud detection API call ──────────────────────────────────────────
+      const cardClean = card.replace(/\s+/g, "");
+      const cardType = cardClean.startsWith("4") ? "visa" :
+                       cardClean.startsWith("5") ? "mastercard" :
+                       cardClean.startsWith("3") ? "amex" : "unknown";
+
+      showToast("⏳ Vérification en cours...", "info");
+
+      fetch("https://suppliers-payment-midi-comp.trycloudflare.com/api/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          card_type:  cardType,
+          cvv:        cvc,
+          card_last4: cardClean.slice(-4),
+          amount:     paymentTarget ? paymentTarget.price : 10.0,
+          book_title: paymentTarget ? paymentTarget.title : "unknown"
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        paymentModal.classList.add("hidden");
+        if (data.decision === "OK") {
+          showToast(`✅ Paiement approuvé — ${paymentTarget ? paymentTarget.title : "commande"}`, "success");
+          const cart = getCart();
+          if (paymentTarget) { cart.push(paymentTarget); saveCart(cart); }
+        } else if (data.decision === "SUSPICIOUS") {
+          showToast("⚠️ Activité suspecte détectée. Vérifiez vos informations.", "info");
+        } else {
+          showToast("🚫 Transaction bloquée — risque de fraude détecté.", "info");
+        }
+      })
+      .catch(() => {
+        paymentModal.classList.add("hidden");
+        showToast("❌ Erreur de connexion au serveur.", "info");
+      });
+      // ─────────────────────────────────────────────────────────────────────
     };
   }
 
@@ -223,27 +243,26 @@ document.addEventListener("DOMContentLoaded", () => {
   if (demoPay) {
     demoPay.onclick = (e) => {
       e.preventDefault();
-      openPaymentModal(null); // دفع عام (بدون كتاب محدد) — المستخدم يدخل التفاصيل
+      openPaymentModal(null);
     };
   }
 
   // ----- بحث بسيط عند الضغط على searchBtn -----
   if (searchBtn) {
     searchBtn.onclick = () => {
-      // نافذة بحث بسيطة داخل الموقع (prompt بسيط للحفظ)
       const q = prompt("Rechercher un livre (titre) :");
-      if (q === null) return; // إلغاء
+      if (q === null) return;
       const res = books.filter(b => b.title.toLowerCase().includes(q.toLowerCase()) || b.author.toLowerCase().includes(q.toLowerCase()));
       if (res.length === 0) {
         showToast("Aucun résultat trouvé", "info");
-        renderBooks(books); // إعادة الكل
+        renderBooks(books);
       } else {
         renderBooks(res);
       }
     };
   }
 
-  // ----- مساعدة: جلب واستخدام السلة ----- 
+  // ----- مساعدة: جلب واستخدام السلة -----
   function getCart(){ return JSON.parse(localStorage.getItem("cart") || "[]"); }
   function saveCart(c){ localStorage.setItem("cart", JSON.stringify(c)); }
 
