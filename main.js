@@ -140,7 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (modalCancel) modalCancel.onclick = () => modal.classList.add("hidden");
 
   // ═══════════════════════════════════════════════════════════════════════
-  //  FRAUD RESULT MODAL — shows full API response
+  //  FRAUD RESULT MODAL
   // ═══════════════════════════════════════════════════════════════════════
   function showFraudResult(data, cardType) {
     const old = document.getElementById("fraudResultModal");
@@ -152,11 +152,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const decisionIcon  = d === "OK" ? "✅" : d === "SUSPICIOUS" ? "⚠️" : "🚫";
 
     const prob   = data.probability_pct !== undefined ? data.probability_pct.toFixed(2) : (data.probability * 100).toFixed(2);
-    const ftProb = data.ft_prob     !== undefined ? (data.ft_prob * 100).toFixed(2)     : "—";
+    const ftProb = data.ft_prob      !== undefined ? (data.ft_prob * 100).toFixed(2)      : "—";
     const aiProb = data.autoint_prob !== undefined ? (data.autoint_prob * 100).toFixed(2) : "—";
-    const conf   = data.confidence_pct !== undefined ? data.confidence_pct.toFixed(1)   : "—";
-    const ms     = data.inference_ms   !== undefined ? data.inference_ms                : "—";
-    const auc    = data.model && data.model.roc_auc   !== undefined ? data.model.roc_auc.toFixed(4)   : "—";
+    const conf   = data.confidence_pct !== undefined ? data.confidence_pct.toFixed(1)     : "—";
+    const ms     = data.inference_ms   !== undefined ? data.inference_ms                  : "—";
     const thr    = data.model && data.model.threshold !== undefined ? data.model.threshold.toFixed(4) : "—";
 
     const cardLabel = cardType.charAt(0).toUpperCase() + cardType.slice(1);
@@ -217,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <!-- Stats grid -->
+        <!-- Stats grid (5 tiles, no AUC) -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;">
             <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">💳 Carte détectée</div>
@@ -235,13 +234,9 @@ document.addEventListener("DOMContentLoaded", () => {
             <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">AutoInt</div>
             <div style="font-size:15px;font-weight:600;color:#caa84b;margin-top:4px;">${aiProb}%</div>
           </div>
-          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;">
-            <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">⚡ Inférence</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;grid-column:span 2;">
+            <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">⚡ Temps d'inférence</div>
             <div style="font-size:15px;font-weight:600;color:#e4e4e7;margin-top:4px;">${ms} ms</div>
-          </div>
-          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;">
-            <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">📈 ROC-AUC</div>
-            <div style="font-size:15px;font-weight:600;color:#e4e4e7;margin-top:4px;">${auc}</div>
           </div>
         </div>
 
@@ -273,14 +268,35 @@ document.addEventListener("DOMContentLoaded", () => {
     paymentModal.classList.remove("hidden");
     paymentModal.classList.add("flex");
 
+    // Auto time from user's PC
+    const now = new Date();
+    const hour = now.getHours();
+    const pad = n => String(n).padStart(2, "0");
+    const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(hour)}:${pad(now.getMinutes())}`;
+
     paymentModal.innerHTML = `
       <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-xl font-semibold">Paiement sécurisé ${bookTitleFor(paymentTarget)}</h3>
           <button id="closePaymentModal" class="text-zinc-400">✕</button>
         </div>
+        <div class="mb-2 text-xs text-zinc-500">🕐 Date/heure : ${timeStr}</div>
         <input id="payFullName" type="text" placeholder="Nom complet" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         <input id="payEmail" type="email" placeholder="E-mail" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <select id="payCardType" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+          <option value="">-- Type de carte --</option>
+          <option value="visa">💳 Visa</option>
+          <option value="mastercard">💳 Mastercard</option>
+          <option value="amex">💳 American Express</option>
+          <option value="discover">💳 Discover</option>
+          <option value="unionpay">💳 UnionPay</option>
+          <option value="jcb">💳 JCB</option>
+          <option value="diners">💳 Diners Club</option>
+          <option value="maestro">💳 Maestro</option>
+          <option value="prepaid">💳 Carte Prépayée</option>
+          <option value="virtual">💳 Carte Virtuelle</option>
+          <option value="unknown">💳 Autre</option>
+        </select>
         <input id="payCard" type="text" placeholder="Numéro de carte (ex: 4242 4242 4242 4242)" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         <div class="flex gap-2">
           <input id="payExp" type="text" placeholder="MM/AA" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
@@ -292,25 +308,23 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>`;
 
-    document.getElementById("closePaymentModal").onclick  = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
-    document.getElementById("cancelPaymentBtn").onclick   = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
+    document.getElementById("closePaymentModal").onclick = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
+    document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
 
     document.getElementById("confirmPaymentBtn").onclick = () => {
-      const name  = document.getElementById("payFullName").value.trim();
-      const email = document.getElementById("payEmail").value.trim();
-      const card  = document.getElementById("payCard").value.trim();
-      const exp   = document.getElementById("payExp").value.trim();
-      const cvc   = document.getElementById("payCvc").value.trim();
+      const name     = document.getElementById("payFullName").value.trim();
+      const email    = document.getElementById("payEmail").value.trim();
+      const card     = document.getElementById("payCard").value.trim();
+      const exp      = document.getElementById("payExp").value.trim();
+      const cvc      = document.getElementById("payCvc").value.trim();
+      const cardType = document.getElementById("payCardType").value;
 
-      if (!name || !email || !card || !exp || !cvc) {
+      if (!name || !email || !cardType || !card || !exp || !cvc) {
         showToast("Veuillez remplir tous les champs du paiement.", "info");
         return;
       }
 
       const cardClean = card.replace(/\s+/g, "");
-      const cardType  = cardClean.startsWith("4") ? "visa" :
-                        cardClean.startsWith("5") ? "mastercard" :
-                        cardClean.startsWith("3") ? "amex" : "unknown";
 
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
@@ -324,7 +338,8 @@ document.addEventListener("DOMContentLoaded", () => {
           cvv:        cvc,
           card_last4: cardClean.slice(-4),
           amount:     paymentTarget ? paymentTarget.price : 10.0,
-          book_title: paymentTarget ? paymentTarget.title : "unknown"
+          book_title: paymentTarget ? paymentTarget.title : "unknown",
+          hour:       new Date().getHours()
         })
       })
       .then(r => r.json())
