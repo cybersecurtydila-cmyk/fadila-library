@@ -316,7 +316,7 @@ document.addEventListener("DOMContentLoaded", () => {
       btn.disabled = true;
       btn.textContent = "⏳ Vérification...";
 
-      fetch("https://suppliers-payment-midi-comp.trycloudflare.com/api/predict", {
+      fetch("https://fadila-api.dolacybersecuritys.workers.dev/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
