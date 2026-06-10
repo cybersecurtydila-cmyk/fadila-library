@@ -251,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <!-- Close -->
         <div style="margin-top:20px;text-align:right;">
-          <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">Fermer</button>
+          <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">${d === "BLOCK" ? "Fermer" : "Valider"}</button>
         </div>
       </div>`;
 
