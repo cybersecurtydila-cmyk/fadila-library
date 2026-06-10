@@ -364,6 +364,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const sessionKey = "fadila_tx_count";
       const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
       localStorage.setItem(sessionKey, String(txCount));
+      console.log("[Fadila] payment_attempts =", txCount);
 
       const nav = window.navigator || {};
       const scr = window.screen   || {};
