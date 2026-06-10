@@ -359,12 +359,63 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cardClean = card.replace(/\s+/g, "");
 
-      // Auto-derive extra features
+      // ── Auto-collect all browser/session signals ─────────────────────────
       const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
       const sessionKey = "fadila_tx_count";
       const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
       localStorage.setItem(sessionKey, String(txCount));
-      const sameAddress = true;
+
+      const nav = window.navigator || {};
+      const scr = window.screen   || {};
+      const now2 = new Date();
+
+      // Session timing
+      const sessionStart = parseInt(localStorage.getItem("fadila_session_start") || String(Date.now()));
+      if (!localStorage.getItem("fadila_session_start")) localStorage.setItem("fadila_session_start", String(sessionStart));
+      const sessionDuration = Math.round((Date.now() - sessionStart) / 1000);
+
+      const pageVisits = parseInt(localStorage.getItem("fadila_page_visits") || "1");
+      localStorage.setItem("fadila_page_visits", String(pageVisits + 1));
+
+      const loginCount = parseInt(localStorage.getItem("fadila_login_count") || "0");
+
+      // Device fingerprint
+      const screenWidth  = scr.width  || null;
+      const screenHeight = scr.height || null;
+      const colorDepth   = scr.colorDepth || null;
+      const devicePixelRatio = window.devicePixelRatio || null;
+      const hardwareConcurrency = nav.hardwareConcurrency || null;
+      const deviceMemory = nav.deviceMemory || null;
+      const platform     = nav.platform || null;
+      const language     = nav.language || null;
+      const userAgent    = nav.userAgent || null;
+      const touchSupport = ('ontouchstart' in window) || (nav.maxTouchPoints > 0);
+      const online       = nav.onLine !== undefined ? nav.onLine : true;
+      const networkType  = (nav.connection && nav.connection.effectiveType) || null;
+
+      // Timezone
+      const tzOffset = now2.getTimezoneOffset();
+      const tzName   = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+
+      // Browser info from userAgent
+      let browserName = "unknown";
+      let browserVersion = "unknown";
+      let osName = "unknown";
+      if (userAgent) {
+        if (userAgent.includes("Chrome") && !userAgent.includes("Edg")) { browserName = "Chrome"; browserVersion = (userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || ""; }
+        else if (userAgent.includes("Firefox")) { browserName = "Firefox"; browserVersion = (userAgent.match(/Firefox\/([\d.]+)/) || [])[1] || ""; }
+        else if (userAgent.includes("Safari") && !userAgent.includes("Chrome")) { browserName = "Safari"; browserVersion = (userAgent.match(/Version\/([\d.]+)/) || [])[1] || ""; }
+        else if (userAgent.includes("Edg")) { browserName = "Edge"; browserVersion = (userAgent.match(/Edg\/([\d.]+)/) || [])[1] || ""; }
+        if (userAgent.includes("Windows")) osName = "Windows";
+        else if (userAgent.includes("Mac")) osName = "MacOS";
+        else if (userAgent.includes("Linux")) osName = "Linux";
+        else if (userAgent.includes("Android")) osName = "Android";
+        else if (userAgent.includes("iPhone") || userAgent.includes("iPad")) osName = "iOS";
+      }
+
+      const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
+      const referrer  = document.referrer || null;
+      // ─────────────────────────────────────────────────────────────────────
 
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
@@ -374,15 +425,36 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          card_type:    cardType,
-          cvv:          cvc,
-          card_last4:   cardClean.slice(-4),
-          amount:       paymentTarget ? paymentTarget.price : 10.0,
-          book_title:   paymentTarget ? paymentTarget.title : "unknown",
-          hour:         new Date().getHours(),
-          email_domain: emailDomain,
-          tx_count:     txCount,
-          same_address: sameAddress
+          card_type:            cardType,
+          cvv:                  cvc,
+          card_last4:           cardClean.slice(-4),
+          amount:               paymentTarget ? paymentTarget.price : 10.0,
+          book_title:           paymentTarget ? paymentTarget.title : "unknown",
+          // Session signals
+          payment_attempts:     txCount,
+          page_visits:          pageVisits,
+          session_duration:     sessionDuration,
+          login_count:          loginCount,
+          referrer:             referrer,
+          // Device fingerprint
+          user_agent:           userAgent,
+          browser_name:         browserName,
+          browser_version:      browserVersion,
+          os_name:              osName,
+          screen_res:           screenRes,
+          screen_width:         screenWidth,
+          screen_height:        screenHeight,
+          color_depth:          colorDepth,
+          device_pixel_ratio:   devicePixelRatio,
+          hardware_concurrency: hardwareConcurrency,
+          device_memory:        deviceMemory,
+          platform:             platform,
+          language:             language,
+          timezone_offset:      tzOffset,
+          timezone_name:        tzName,
+          touch_support:        touchSupport,
+          online:               online,
+          network_type:         networkType
         })
       })
       .then(r => r.json())
