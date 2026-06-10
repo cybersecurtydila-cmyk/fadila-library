@@ -359,6 +359,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cardClean = card.replace(/\s+/g, "");
 
+      // Auto-derive extra features
+      const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
+      const sessionKey = "fadila_tx_count";
+      const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
+      localStorage.setItem(sessionKey, String(txCount));
+      const sameAddress = true;
+
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
       btn.textContent = "⏳ Vérification...";
@@ -367,12 +374,15 @@ document.addEventListener("DOMContentLoaded", () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          card_type:  cardType,
-          cvv:        cvc,
-          card_last4: cardClean.slice(-4),
-          amount:     paymentTarget ? paymentTarget.price : 10.0,
-          book_title: paymentTarget ? paymentTarget.title : "unknown",
-          hour:       new Date().getHours()
+          card_type:    cardType,
+          cvv:          cvc,
+          card_last4:   cardClean.slice(-4),
+          amount:       paymentTarget ? paymentTarget.price : 10.0,
+          book_title:   paymentTarget ? paymentTarget.title : "unknown",
+          hour:         new Date().getHours(),
+          email_domain: emailDomain,
+          tx_count:     txCount,
+          same_address: sameAddress
         })
       })
       .then(r => r.json())
