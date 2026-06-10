@@ -162,26 +162,59 @@ document.addEventListener("DOMContentLoaded", () => {
     const riskWidth = Math.min(100, parseFloat(prob));
     const riskColor = riskWidth < 30 ? "#16a34a" : riskWidth < 60 ? "#d97706" : "#dc2626";
 
-    // SHAP bars
+    // SHAP — contributions + explanations
     let shapHtml = "";
-    if (data.shap && data.shap.features && data.shap.features.length > 0) {
-      const top = data.shap.features.slice(0, 6);
-      const maxAbs = Math.max(...top.map(f => Math.abs(f.value)), 0.001);
+    if (data.shap) {
+      const contribs = data.shap.contributions || [];
+      const exps     = data.shap.explanations  || [];
+      const baseVal  = data.shap.base_value !== undefined ? data.shap.base_value.toFixed(5) : "—";
+
+      // contributions bars
+      let contribRows = "";
+      if (contribs.length > 0) {
+        const maxAbs = Math.max(...contribs.map(f => Math.abs(f.shap)), 0.001);
+        contribRows = contribs.map(f => {
+          const pct  = Math.round((Math.abs(f.shap) / maxAbs) * 100);
+          const col  = f.direction === "risk" ? "#dc2626" : "#16a34a";
+          const sign = f.shap > 0 ? "▲" : "▼";
+          const dot  = f.direction === "risk" ? "#dc2626" : "#16a34a";
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+            <div style="width:8px;height:8px;border-radius:50%;background:${dot};flex-shrink:0;"></div>
+            <div style="flex:1;font-size:12px;color:#d4d4d8;">${f.label}</div>
+            <div style="width:80px;background:#1a1a1a;border-radius:4px;height:7px;overflow:hidden;flex-shrink:0;">
+              <div style="width:${pct}%;height:100%;background:${col};border-radius:4px;"></div>
+            </div>
+            <div style="width:60px;font-size:11px;color:${col};text-align:right;font-weight:600;flex-shrink:0;">${sign} ${Math.abs(f.shap).toFixed(4)}</div>
+          </div>`;
+        }).join("");
+      }
+
+      // explanations bullets
+      let expRows = "";
+      if (exps.length > 0) {
+        expRows = exps.map(e => {
+          const [type, text] = e;
+          const col  = type === "risk" ? "#dc2626" : type === "warn" ? "#d97706" : "#16a34a";
+          const icon = type === "risk" ? "🔴" : type === "warn" ? "🟡" : "🟢";
+          return `<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;">
+            <span style="font-size:12px;flex-shrink:0;">${icon}</span>
+            <span style="font-size:12px;color:#d4d4d8;line-height:1.4;">${text}</span>
+          </div>`;
+        }).join("");
+      }
+
       shapHtml = `
         <div style="margin-top:16px;">
-          <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🔍 Facteurs SHAP — Top 6</div>
-          ${top.map(f => {
-            const pct = Math.round((Math.abs(f.value) / maxAbs) * 100);
-            const col  = f.value > 0 ? "#dc2626" : "#16a34a";
-            const sign = f.value > 0 ? "▲" : "▼";
-            return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">
-              <div style="width:120px;font-size:11px;color:#d4d4d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${f.feature}">${f.feature}</div>
-              <div style="flex:1;background:#1a1a1a;border-radius:4px;height:8px;overflow:hidden;">
-                <div style="width:${pct}%;height:100%;background:${col};border-radius:4px;"></div>
-              </div>
-              <div style="width:56px;font-size:11px;color:${col};text-align:right;font-weight:600;">${sign} ${Math.abs(f.value).toFixed(3)}</div>
-            </div>`;
-          }).join("")}
+          <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🔍 Contributions SHAP — Facteurs de risque</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:10px;">
+            ${contribRows || '<div style="font-size:12px;color:#71717a;">Aucune contribution disponible</div>'}
+          </div>
+          ${expRows ? `
+          <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">Explication du modèle</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:10px;">
+            ${expRows}
+          </div>` : ""}
+          <div style="font-size:11px;color:#52525b;text-align:right;">Valeur de base SHAP : ${baseVal}</div>
         </div>`;
     }
 
