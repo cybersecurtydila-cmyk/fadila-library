@@ -361,22 +361,25 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // ── Auto-collect all browser/session signals ─────────────────────────
       const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
+
+      // FIX 1: Use sessionStorage so counter resets when tab is closed
       const sessionKey = "fadila_tx_count";
-      const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
-      localStorage.setItem(sessionKey, String(txCount));
+      const txCount = parseInt(sessionStorage.getItem(sessionKey) || "0") + 1;
+      sessionStorage.setItem(sessionKey, String(txCount));
       console.log("[Fadila] payment_attempts =", txCount);
 
       const nav = window.navigator || {};
       const scr = window.screen   || {};
       const now2 = new Date();
 
-      // Session timing
-      const sessionStart = parseInt(localStorage.getItem("fadila_session_start") || String(Date.now()));
-      if (!localStorage.getItem("fadila_session_start")) localStorage.setItem("fadila_session_start", String(sessionStart));
+      // FIX 2: Use sessionStorage for session start so it resets per tab
+      const sessionStart = parseInt(sessionStorage.getItem("fadila_session_start") || String(Date.now()));
+      if (!sessionStorage.getItem("fadila_session_start")) sessionStorage.setItem("fadila_session_start", String(sessionStart));
       const sessionDuration = Math.round((Date.now() - sessionStart) / 1000);
 
-      const pageVisits = parseInt(localStorage.getItem("fadila_page_visits") || "1");
-      localStorage.setItem("fadila_page_visits", String(pageVisits + 1));
+      // FIX 3: Use sessionStorage for page visits so it resets per tab
+      const pageVisits = parseInt(sessionStorage.getItem("fadila_page_visits") || "1");
+      sessionStorage.setItem("fadila_page_visits", String(pageVisits + 1));
 
       const loginCount = parseInt(localStorage.getItem("fadila_login_count") || "0");
 
@@ -466,6 +469,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.decision === "OK") {
           const cart = getCart();
           if (paymentTarget) { cart.push(paymentTarget); saveCart(cart); }
+          // FIX 4: Reset attempt counter after successful payment
+          sessionStorage.setItem("fadila_tx_count", "0");
         }
       })
       .catch(() => {
@@ -493,10 +498,6 @@ document.addEventListener("DOMContentLoaded", () => {
       else renderBooks(res);
     };
   }
-
-  // ----- سلة -----
-  function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-  function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); }
 
   // ----- Init -----
   renderBooks();
