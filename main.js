@@ -214,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:10px;">
             ${expRows}
           </div>` : ""}
-          <div style="font-size:11px;color:#52525b;text-align:right;">Valeur de base SHAP : ${baseVal}</div>
+
         </div>`;
     }
 
