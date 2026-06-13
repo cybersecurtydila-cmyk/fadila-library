@@ -303,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Auto time from user's PC
     const now = new Date();
-    const hour = (now.getHours() + 1) % 24;  // UTC+1 Algeria
+    const hour = (now.getHours() + 2) % 24;  // UTC+2 Algeria summer
     const pad = n => String(n).padStart(2, "0");
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(hour)}:${pad(now.getMinutes())}`;
 
