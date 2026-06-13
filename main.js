@@ -303,7 +303,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Auto time from user's PC
     const now = new Date();
-    const hour = now.getHours();
+    const hour = (now.getHours() + 1) % 24;  // UTC+1 Algeria
     const pad = n => String(n).padStart(2, "0");
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(hour)}:${pad(now.getMinutes())}`;
 
@@ -431,6 +431,7 @@ document.addEventListener("DOMContentLoaded", () => {
           card_last4:           cardClean.slice(-4),
           amount:               paymentTarget ? paymentTarget.price : 10.0,
           book_title:           paymentTarget ? paymentTarget.title : "unknown",
+          hour:                 hour,
           // Session signals
           payment_attempts:     txCount,
           page_visits:          pageVisits,
