@@ -427,6 +427,16 @@ document.addEventListener("DOMContentLoaded", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           card_type:            cardType,
+          card_expiry:          exp,
+          card_expired:         (() => {
+            const parts = exp.split("/");
+            if (parts.length !== 2) return false;
+            const expMonth = parseInt(parts[0]);
+            const expYear  = parseInt("20" + parts[1]);
+            const now3     = new Date();
+            return (expYear < now3.getFullYear()) ||
+                   (expYear === now3.getFullYear() && expMonth < (now3.getMonth() + 1));
+          })(),
           cvv:                  cvc,
           card_last4:           cardClean.slice(-4),
           amount:               paymentTarget ? paymentTarget.price : 10.0,
