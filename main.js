@@ -611,13 +611,13 @@ document.addEventListener("DOMContentLoaded", () => {
         card_type:            cardType,
         card_expiry:          exp,
         card_expired:         (() => {
-          const clean = exp.trim().replace(/\s/g, "");
+          const clean = exp.trim().replace(/[\s\-]/g, "");
           const parts = clean.split("/");
-          if (parts.length !== 2) return true; // unreadable format = treat as expired
+          if (parts.length !== 2) return false; // unreadable = don't assume expired
           const expMonth = parseInt(parts[0], 10);
           const yearRaw  = parts[1].trim();
           const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
-          if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return true;
+          if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return false;
           const now3 = new Date();
           const curYear  = now3.getFullYear();
           const curMonth = now3.getMonth() + 1;
