@@ -535,7 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else { panel.style.display = "none"; btn.textContent = "Details"; }
     };
 
-    document.getElementById("confirmPaymentBtn").onclick = async () => {
+    document.getElementById("confirmPaymentBtn").onclick = () => {
       const name     = document.getElementById("payFullName").value.trim();
       const email    = document.getElementById("payEmail").value.trim();
       const card     = document.getElementById("payCard").value.trim();
@@ -606,8 +606,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const cookiesEnabled  = nav.cookieEnabled !== undefined ? nav.cookieEnabled : null;
       const localStorageOk  = (() => { try { localStorage.setItem("_t","1"); localStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
       const sessionStorageOk= (() => { try { sessionStorage.setItem("_t","1"); sessionStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
-      const batteryLevel    = await (async () => { try { const b = await navigator.getBattery(); return b.level; } catch(e) { return null; } })();
-      const batteryCharging = await (async () => { try { const b = await navigator.getBattery(); return b.charging; } catch(e) { return null; } })();
+      const batteryLevel    = null;
+      const batteryCharging = null;
       const emailDomain     = email.includes("@") ? email.split("@")[1].toLowerCase() : null;
 
       const btn = document.getElementById("confirmPaymentBtn");
