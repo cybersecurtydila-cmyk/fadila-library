@@ -286,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         <!-- CHANGE 2 — buttons row with new Raw Features button -->
         <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
-          <button id="showRawFeatures" style="padding:10px 18px;border-radius:8px;background:#18181b;color:#caa84b;font-weight:600;border:1px solid #caa84b;cursor:pointer;font-size:13px;">🔬 Why this decision?</button>
+          ${d === "SUSPICIOUS" || d === "BLOCK" ? `<button id="showRawFeatures" style="padding:10px 18px;border-radius:8px;background:#18181b;color:#caa84b;font-weight:600;border:1px solid #caa84b;cursor:pointer;font-size:13px;">🔬 Why this decision?</button>` : ""}
           <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">${d === "BLOCK" ? "Fermer" : "Valider"}</button>
         </div>
       </div>`;
@@ -295,8 +295,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeFraudResult").onclick = () => overlay.remove();
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-    // CHANGE 2 continued — why this decision modal
-    document.getElementById("showRawFeatures").onclick = () => {
+    // CHANGE 2 continued — why this decision modal (only for SUSPICIOUS/BLOCK)
+    const rawBtn = document.getElementById("showRawFeatures");
+    if (rawBtn) rawBtn.onclick = () => {
       const old2 = document.getElementById("rawFeaturesModal");
       if (old2) old2.remove();
 
