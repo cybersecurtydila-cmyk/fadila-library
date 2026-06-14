@@ -1,6 +1,5 @@
 // main.js — لاظهار الكتب، السلة، ومودال الدفع (متوافق مع index.html الأصلي)
 document.addEventListener("DOMContentLoaded", () => {
-  // ----- عناصر HTML (نتحقق أولاً من وجودها) -----
   const grid = document.getElementById("grid");
   const modal = document.getElementById("modal");
   const modalTitle = document.getElementById("modalTitle");
@@ -8,7 +7,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const modalBuy = document.getElementById("modalBuy");
   const modalCancel = document.getElementById("modalCancel");
   const closeModal = document.getElementById("closeModal");
-
   const paymentModal = document.getElementById("paymentModal");
   const paymentModalTitle = document.getElementById("paymentModalTitle");
   const closePaymentModal = document.getElementById("closePaymentModal");
@@ -18,11 +16,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const searchBtn = document.getElementById("searchBtn");
 
   if (!grid) {
-    console.error("main.js: element #grid not found. تأكدي أن index.html يحتوي على <div id=\"grid\">");
+    console.error("main.js: element #grid not found.");
     return;
   }
 
-  // ----- بيانات كتب تجريبية (قابلة للتعديل) -----
   const books = [
     {id:1, title:"Le Petit Prince", author:"Antoine de Saint-Exupéry", price:9.99, img:"https://images.unsplash.com/photo-1524995997946-a1c2e315a42f", lang:"FR"},
     {id:2, title:"Pride and Prejudice", author:"Jane Austen", price:12.5, img:"https://images.unsplash.com/photo-1528207776546-365bb710ee93", lang:"EN"},
@@ -32,7 +29,6 @@ document.addEventListener("DOMContentLoaded", () => {
     {id:6, title:"Madame Bovary", author:"Gustave Flaubert", price:10.0, img:"https://images.unsplash.com/photo-1519681393784-d120267933ba", lang:"FR"}
   ];
 
-  // ----- toast داخلي جميل بديل للـ alert -----
   function showToast(message, type = "info") {
     const t = document.createElement("div");
     t.className = "fixed right-6 top-6 z-50 p-3 rounded shadow-lg";
@@ -45,7 +41,6 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => t.remove(), 3800);
   }
 
-  // ----- رندرة الكتب داخل #grid -----
   function renderBooks(list = books) {
     grid.innerHTML = "";
     list.forEach(book => {
@@ -72,12 +67,10 @@ document.addEventListener("DOMContentLoaded", () => {
     attachBookListeners();
   }
 
-  // ----- حماية النص (بسيطة) -----
   function escapeHtml(s) {
     return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   }
 
-  // ----- ربط الأحداث -----
   function attachBookListeners() {
     grid.querySelectorAll(".btn-detail").forEach(btn => {
       btn.onclick = (e) => {
@@ -102,7 +95,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ----- سلة المشتريات -----
   function getCart() {
     try { return JSON.parse(localStorage.getItem("cart") || "[]"); }
     catch { return []; }
@@ -115,7 +107,6 @@ document.addEventListener("DOMContentLoaded", () => {
     showToast(`${book.title} ajouté au panier`, "success");
   }
 
-  // ----- Modal التفاصيل -----
   function openDetailModal(book) {
     if (!modal) return;
     modalTitle.textContent = book.title;
@@ -169,7 +160,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const exps     = data.shap.explanations  || [];
       const baseVal  = data.shap.base_value !== undefined ? data.shap.base_value.toFixed(5) : "—";
 
-      // contributions bars
       let contribRows = "";
       if (contribs.length > 0) {
         const maxAbs = Math.max(...contribs.map(f => Math.abs(f.shap)), 0.001);
@@ -189,7 +179,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }).join("");
       }
 
-      // explanations bullets
       let expRows = "";
       if (exps.length > 0) {
         expRows = exps.map(e => {
@@ -214,7 +203,130 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:10px;">
             ${expRows}
           </div>` : ""}
+        </div>`;
+    }
 
+    // ═══════════════════════════════════════════════════════════════════════
+    //  "WHY THIS DECISION?" PANEL — reads directly from API response
+    // ═══════════════════════════════════════════════════════════════════════
+    function buildWhyPanel() {
+      const contribs = (data.shap && data.shap.contributions) ? data.shap.contributions : [];
+      const exps     = (data.shap && data.shap.explanations)  ? data.shap.explanations  : [];
+      const baseVal  = (data.shap && data.shap.base_value !== undefined) ? data.shap.base_value.toFixed(5) : "—";
+
+      const sorted     = [...contribs].sort((a, b) => Math.abs(b.shap) - Math.abs(a.shap));
+      const riskFacts  = sorted.filter(f => f.direction === "risk" || f.shap > 0).slice(0, 5);
+      const safeFacts  = sorted.filter(f => f.direction === "safe" || f.shap <= 0).slice(0, 3);
+      const maxAbs     = sorted.length > 0 ? Math.max(...sorted.map(f => Math.abs(f.shap)), 0.001) : 0.001;
+
+      const decisionSentence = {
+        "OK":         "The system determined this transaction is <strong style='color:#16a34a;'>LEGITIMATE</strong>. Fraud indicators are below the alert threshold.",
+        "SUSPICIOUS": "The system flagged this transaction as <strong style='color:#d97706;'>SUSPICIOUS</strong>. Some risk signals exceed the review threshold but not the block threshold.",
+        "BLOCK":      "The system <strong style='color:#dc2626;'>BLOCKED</strong> this transaction. Multiple high-risk signals push the fraud probability above the block threshold."
+      }[d] || "Decision based on fraud model output.";
+
+      const riskRows = riskFacts.length > 0
+        ? riskFacts.map(f => {
+            const pct = Math.round((Math.abs(f.shap) / maxAbs) * 100);
+            return `<div style="margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                <span style="font-size:12px;color:#fca5a5;font-weight:500;">🔴 ${f.label}</span>
+                <span style="font-size:11px;color:#dc2626;font-weight:600;">+${Math.abs(f.shap).toFixed(4)}</span>
+              </div>
+              <div style="background:#1a1a1a;border-radius:4px;height:6px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#991b1b,#dc2626);border-radius:4px;"></div>
+              </div>
+            </div>`;
+          }).join("")
+        : `<div style="font-size:12px;color:#71717a;">No significant risk factors detected.</div>`;
+
+      const safeRows = safeFacts.length > 0
+        ? safeFacts.map(f => {
+            const pct = Math.round((Math.abs(f.shap) / maxAbs) * 100);
+            return `<div style="margin-bottom:10px;">
+              <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+                <span style="font-size:12px;color:#86efac;font-weight:500;">🟢 ${f.label}</span>
+                <span style="font-size:11px;color:#16a34a;font-weight:600;">−${Math.abs(f.shap).toFixed(4)}</span>
+              </div>
+              <div style="background:#1a1a1a;border-radius:4px;height:6px;overflow:hidden;">
+                <div style="width:${pct}%;height:100%;background:linear-gradient(90deg,#14532d,#16a34a);border-radius:4px;"></div>
+              </div>
+            </div>`;
+          }).join("")
+        : `<div style="font-size:12px;color:#71717a;">No significant safe factors detected.</div>`;
+
+      const ftVal = data.ft_prob      !== undefined ? (data.ft_prob * 100).toFixed(1)      : null;
+      const aiVal = data.autoint_prob !== undefined ? (data.autoint_prob * 100).toFixed(2) : null;
+      const agreement = (ftVal && aiVal)
+        ? (() => {
+            const diff = Math.abs(parseFloat(ftVal) - parseFloat(aiVal));
+            if (diff < 10) return `<span style="color:#16a34a;">✅ Both models strongly agree (gap: ${diff.toFixed(1)}%)</span>`;
+            if (diff < 25) return `<span style="color:#d97706;">⚠️ Models partially agree (gap: ${diff.toFixed(1)}%)</span>`;
+            return `<span style="color:#dc2626;">❌ Models disagree — meta-model resolved the conflict (gap: ${diff.toFixed(1)}%)</span>`;
+          })()
+        : `<span style="color:#71717a;">Model agreement data not available</span>`;
+
+      const expSection = exps.length > 0
+        ? exps.map(e => {
+            const [type, text] = e;
+            const icon = type === "risk" ? "🔴" : type === "warn" ? "🟡" : "🟢";
+            const col  = type === "risk" ? "#fca5a5" : type === "warn" ? "#fde68a" : "#86efac";
+            return `<div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start;">
+              <span style="flex-shrink:0;">${icon}</span>
+              <span style="font-size:12px;color:${col};line-height:1.5;">${text}</span>
+            </div>`;
+          }).join("")
+        : `<div style="font-size:12px;color:#71717a;">No detailed explanations available from the model.</div>`;
+
+      return `
+        <div id="whyPanel" style="display:none;margin-top:14px;background:#0a0a0a;border:1px solid #3f3f46;border-radius:12px;padding:18px;">
+
+          <div style="font-size:13px;font-weight:700;color:#e4e4e7;margin-bottom:14px;">
+            🧠 Why did the system decide <span style="color:${decisionColor};">${d}</span>?
+          </div>
+
+          <div style="font-size:12px;color:#a1a1aa;line-height:1.6;margin-bottom:16px;padding:10px;background:#111;border-radius:8px;border-left:3px solid ${decisionColor};">
+            ${decisionSentence}
+          </div>
+
+          <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">📊 Model scores for this transaction</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;">
+            <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:10px;color:#71717a;margin-bottom:4px;">FT-Transformer</div>
+              <div style="font-size:16px;font-weight:700;color:#caa84b;">${ftVal !== null ? ftVal + "%" : "—"}</div>
+            </div>
+            <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:10px;color:#71717a;margin-bottom:4px;">AutoInt</div>
+              <div style="font-size:16px;font-weight:700;color:#caa84b;">${aiVal !== null ? aiVal + "%" : "—"}</div>
+            </div>
+            <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px;text-align:center;">
+              <div style="font-size:10px;color:#71717a;margin-bottom:4px;">Final score</div>
+              <div style="font-size:16px;font-weight:700;color:${riskColor};">${prob}%</div>
+            </div>
+          </div>
+
+          <div style="font-size:11px;margin-bottom:14px;padding:8px 12px;background:#111;border-radius:8px;">
+            ${agreement}
+          </div>
+
+          <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🚨 Features that increased fraud risk</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:14px;">
+            ${riskRows}
+          </div>
+
+          <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">🛡️ Features that reduced fraud risk</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:14px;">
+            ${safeRows}
+          </div>
+
+          <div style="font-size:11px;color:#71717a;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;">💬 System explanation</div>
+          <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:14px;">
+            ${expSection}
+          </div>
+
+          <div style="font-size:10px;color:#3f3f46;text-align:right;">
+            SHAP base value: ${baseVal} &nbsp;|&nbsp; Threshold: ${thr} &nbsp;|&nbsp; Inference: ${ms}ms
+          </div>
         </div>`;
     }
 
@@ -225,7 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
     overlay.innerHTML = `
       <div style="background:#0b0b0b;border:1px solid #27272a;border-radius:16px;max-width:500px;width:100%;padding:26px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-height:90vh;overflow-y:auto;">
 
-        <!-- Decision banner -->
         <div style="background:${decisionBg};border:1px solid ${decisionColor}55;border-radius:10px;padding:14px 18px;margin-bottom:18px;display:flex;align-items:center;gap:12px;">
           <span style="font-size:26px;">${decisionIcon}</span>
           <div>
@@ -234,7 +345,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <!-- Risk bar -->
         <div style="margin-bottom:18px;">
           <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
             <span style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;">Score de risque fraud</span>
@@ -249,7 +359,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <!-- Stats grid (5 tiles, no AUC) -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;">
             <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">💳 Carte détectée</div>
@@ -273,24 +382,46 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <!-- Threshold row -->
         <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:9px 13px;margin-bottom:14px;font-size:12px;color:#71717a;display:flex;gap:16px;flex-wrap:wrap;">
           <span>Seuil XGBoost : <strong style="color:#caa84b;">${thr}</strong></span>
           <span>Prob. brute : <strong style="color:#caa84b;">${(parseFloat(prob)/100).toFixed(6)}</strong></span>
         </div>
 
-        <!-- SHAP -->
         ${shapHtml}
 
-        <!-- Close -->
-        <div style="margin-top:20px;text-align:right;">
-          <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">${d === "BLOCK" ? "Fermer" : "Valider"}</button>
+        ${buildWhyPanel()}
+
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;align-items:center;">
+          <button id="whyBtn" style="padding:10px 20px;border-radius:8px;background:transparent;color:#a1a1aa;font-weight:600;border:1px solid #3f3f46;cursor:pointer;font-size:13px;">
+            🧠 Why this decision?
+          </button>
+          <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">
+            ${d === "BLOCK" ? "Fermer" : "Valider"}
+          </button>
         </div>
       </div>`;
 
     document.body.appendChild(overlay);
     document.getElementById("closeFraudResult").onclick = () => overlay.remove();
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    // WHY BUTTON TOGGLE
+    document.getElementById("whyBtn").onclick = () => {
+      const panel = document.getElementById("whyPanel");
+      const btn   = document.getElementById("whyBtn");
+      if (panel.style.display === "none") {
+        panel.style.display = "block";
+        btn.style.background = "#1c1c1e";
+        btn.style.color = "#e4e4e7";
+        btn.textContent = "🧠 Hide explanation";
+        panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      } else {
+        panel.style.display = "none";
+        btn.style.background = "transparent";
+        btn.style.color = "#a1a1aa";
+        btn.textContent = "🧠 Why this decision?";
+      }
+    };
   }
 
   // ----- Modal الدفع -----
@@ -301,11 +432,10 @@ document.addEventListener("DOMContentLoaded", () => {
     paymentModal.classList.remove("hidden");
     paymentModal.classList.add("flex");
 
-    // Auto time from user's PC
-    const now = new Date();
-    const hour = new Date().getHours();  // use browser local time directly
-    const pad = n => String(n).padStart(2, "0");
-    const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const now  = new Date();
+    const hour = now.getHours();
+    const pad  = n => String(n).padStart(2, "0");
+    const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(hour)}:${pad(now.getMinutes())}`;
 
     paymentModal.innerHTML = `
       <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
@@ -313,19 +443,13 @@ document.addEventListener("DOMContentLoaded", () => {
           <h3 class="text-xl font-semibold">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
           <button id="closePaymentModal" class="text-zinc-400">✕</button>
         </div>
-
-        <!-- Auto-collected signals info -->
         <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#71717a;">
           🤖 <strong style="color:#caa84b;">Fraud detection signals collected automatically:</strong><br>
           <span style="color:#52525b;">🕐 Date/Time: ${timeStr} &nbsp;|&nbsp; 🌐 Browser: auto-detected &nbsp;|&nbsp; 📊 Session: tracked &nbsp;|&nbsp; 📍 Timezone: auto</span>
         </div>
-
-        <!-- Cardholder info -->
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cardholder Information</div>
         <input id="payFullName" type="text" placeholder="Full name" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         <input id="payEmail" type="email" placeholder="Email address" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-
-        <!-- Card details -->
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:8px;">Card Details</div>
         <select id="payCardType" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
           <option value="">-- Card Type --</option>
@@ -346,32 +470,22 @@ document.addEventListener("DOMContentLoaded", () => {
           <input id="payExp" type="text" placeholder="MM/YY" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
           <input id="payCvc" type="text" placeholder="CVC" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         </div>
-
-
-
         <div class="mt-4 flex justify-end gap-3">
           <button id="detailsBtn" class="px-4 py-2 rounded border border-zinc-700 text-sm">Details</button>
           <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
           <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
         </div>
-
-        <!-- Details panel hidden by default -->
         <div id="detailsPanel" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:11px;">
           <div style="color:#caa84b;font-weight:600;margin-bottom:8px;">🔍 Signals used by fraud detection system:</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#71717a;">
-            <span>💳 Card type & pattern</span>
-            <span>📅 Card expiry date</span>
-            <span>🔐 CVV quality</span>
-            <span>🕐 Transaction hour</span>
-            <span>🌐 Browser fingerprint</span>
-            <span>📊 Payment velocity</span>
-            <span>⏱️ Session duration</span>
-            <span>🖥️ Device profile</span>
-            <span>🌍 Timezone & language</span>
-            <span>📧 Email domain risk</span>
+            <span>💳 Card type & pattern</span><span>📅 Card expiry date</span>
+            <span>🔐 CVV quality</span><span>🕐 Transaction hour</span>
+            <span>🌐 Browser fingerprint</span><span>📊 Payment velocity</span>
+            <span>⏱️ Session duration</span><span>🖥️ Device profile</span>
+            <span>🌍 Timezone & language</span><span>📧 Email domain risk</span>
           </div>
           <div style="margin-top:10px;color:#52525b;font-size:10px;">
-            These signals are automatically collected and fed into FT-Transformer → AutoInt → XGBoost pipeline to produce the fraud decision.
+            These signals are automatically collected and fed into FT-Transformer → AutoInt → XGBoost pipeline.
           </div>
         </div>
       </div>`;
@@ -381,15 +495,9 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("detailsBtn").onclick = () => {
       const panel = document.getElementById("detailsPanel");
       const btn   = document.getElementById("detailsBtn");
-      if (panel.style.display === "none") {
-        panel.style.display = "block";
-        btn.textContent = "Hide Details";
-      } else {
-        panel.style.display = "none";
-        btn.textContent = "Details";
-      }
+      panel.style.display = panel.style.display === "none" ? "block" : "none";
+      btn.textContent = panel.style.display === "none" ? "Details" : "Hide Details";
     };
-
 
     document.getElementById("confirmPaymentBtn").onclick = () => {
       const name     = document.getElementById("payFullName").value.trim();
@@ -405,50 +513,42 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const cardClean = card.replace(/\s+/g, "");
-
-      // ── Auto-collect all browser/session signals ─────────────────────────
       const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
+
+      // FIX: sessionStorage resets per tab
       const sessionKey = "fadila_tx_count";
-      const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
-      localStorage.setItem(sessionKey, String(txCount));
+      const txCount = parseInt(sessionStorage.getItem(sessionKey) || "0") + 1;
+      sessionStorage.setItem(sessionKey, String(txCount));
       console.log("[Fadila] payment_attempts =", txCount);
 
       const nav = window.navigator || {};
       const scr = window.screen   || {};
       const now2 = new Date();
 
-      // Session timing
-      const sessionStart = parseInt(localStorage.getItem("fadila_session_start") || String(Date.now()));
-      if (!localStorage.getItem("fadila_session_start")) localStorage.setItem("fadila_session_start", String(sessionStart));
+      const sessionStart = parseInt(sessionStorage.getItem("fadila_session_start") || String(Date.now()));
+      if (!sessionStorage.getItem("fadila_session_start")) sessionStorage.setItem("fadila_session_start", String(sessionStart));
       const sessionDuration = Math.round((Date.now() - sessionStart) / 1000);
 
-      const pageVisits = parseInt(localStorage.getItem("fadila_page_visits") || "1");
-      localStorage.setItem("fadila_page_visits", String(pageVisits + 1));
+      const pageVisits = parseInt(sessionStorage.getItem("fadila_page_visits") || "1");
+      sessionStorage.setItem("fadila_page_visits", String(pageVisits + 1));
 
-      const loginCount = parseInt(localStorage.getItem("fadila_login_count") || "0");
-
-      // Device fingerprint
-      const screenWidth  = scr.width  || null;
-      const screenHeight = scr.height || null;
-      const colorDepth   = scr.colorDepth || null;
+      const loginCount       = parseInt(localStorage.getItem("fadila_login_count") || "0");
+      const screenWidth      = scr.width  || null;
+      const screenHeight     = scr.height || null;
+      const colorDepth       = scr.colorDepth || null;
       const devicePixelRatio = window.devicePixelRatio || null;
       const hardwareConcurrency = nav.hardwareConcurrency || null;
-      const deviceMemory = nav.deviceMemory || null;
-      const platform     = nav.platform || null;
-      const language     = nav.language || null;
-      const userAgent    = nav.userAgent || null;
-      const touchSupport = ('ontouchstart' in window) || (nav.maxTouchPoints > 0);
-      const online       = nav.onLine !== undefined ? nav.onLine : true;
-      const networkType  = (nav.connection && nav.connection.effectiveType) || null;
+      const deviceMemory     = nav.deviceMemory || null;
+      const platform         = nav.platform || null;
+      const language         = nav.language || null;
+      const userAgent        = nav.userAgent || null;
+      const touchSupport     = ('ontouchstart' in window) || (nav.maxTouchPoints > 0);
+      const online           = nav.onLine !== undefined ? nav.onLine : true;
+      const networkType      = (nav.connection && nav.connection.effectiveType) || null;
+      const tzOffset         = now2.getTimezoneOffset();
+      const tzName           = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 
-      // Timezone
-      const tzOffset = now2.getTimezoneOffset();
-      const tzName   = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-
-      // Browser info from userAgent
-      let browserName = "unknown";
-      let browserVersion = "unknown";
-      let osName = "unknown";
+      let browserName = "unknown", browserVersion = "unknown", osName = "unknown";
       if (userAgent) {
         if (userAgent.includes("Chrome") && !userAgent.includes("Edg")) { browserName = "Chrome"; browserVersion = (userAgent.match(/Chrome\/([\d.]+)/) || [])[1] || ""; }
         else if (userAgent.includes("Firefox")) { browserName = "Firefox"; browserVersion = (userAgent.match(/Firefox\/([\d.]+)/) || [])[1] || ""; }
@@ -463,7 +563,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
       const referrer  = document.referrer || null;
-      // ─────────────────────────────────────────────────────────────────────
 
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
@@ -475,14 +574,13 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify({
           card_type:            cardType,
           card_expiry:          exp,
-          card_expired:         (() => {
+          card_expired: (() => {
             const parts = exp.split("/");
             if (parts.length !== 2) return false;
             const expMonth = parseInt(parts[0]);
             const expYear  = parseInt("20" + parts[1]);
-            const now3     = new Date();
-            return (expYear < now3.getFullYear()) ||
-                   (expYear === now3.getFullYear() && expMonth < (now3.getMonth() + 1));
+            const n = new Date();
+            return (expYear < n.getFullYear()) || (expYear === n.getFullYear() && expMonth < (n.getMonth() + 1));
           })(),
           cvv:                  cvc,
           card_last4:           cardClean.slice(-4),
@@ -491,13 +589,10 @@ document.addEventListener("DOMContentLoaded", () => {
           hour:                 hour,
           username:             localStorage.getItem("connectedUser") || "guest",
           login_count:          parseInt(localStorage.getItem("fadila_login_count") || "1"),
-          // Session signals
           payment_attempts:     txCount,
           page_visits:          pageVisits,
           session_duration:     sessionDuration,
-          login_count:          loginCount,
           referrer:             referrer,
-          // Device fingerprint
           user_agent:           userAgent,
           browser_name:         browserName,
           browser_version:      browserVersion,
@@ -526,11 +621,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (data.decision === "OK") {
           const cart = getCart();
           if (paymentTarget) { cart.push(paymentTarget); saveCart(cart); }
+          sessionStorage.setItem("fadila_tx_count", "0");
         }
       })
       .catch(() => {
         btn.disabled = false;
-        btn.textContent = "Confirmer le paiement";
+        btn.textContent = "Confirm Payment";
         showToast("❌ Erreur de connexion au serveur. Vérifiez que le backend est démarré.", "info");
       });
     };
@@ -538,12 +634,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function bookTitleFor(b) { return b ? " — " + b.title : ""; }
 
-  // ----- زر demoPay -----
   if (demoPay) {
     demoPay.onclick = (e) => { e.preventDefault(); openPaymentModal(null); };
   }
 
-  // ----- بحث -----
   if (searchBtn) {
     searchBtn.onclick = () => {
       const q = prompt("Rechercher un livre (titre) :");
@@ -554,10 +648,5 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ----- سلة -----
-  function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-  function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); }
-
-  // ----- Init -----
   renderBooks();
 });
