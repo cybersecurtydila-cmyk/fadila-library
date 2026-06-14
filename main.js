@@ -406,8 +406,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       ];
 
-      const rowsHtml = features.map((f, i) => `
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;${i % 2 === 0 ? "background:#0d0d0d;" : "background:#111;"}border-bottom:1px solid #1a1a1a;border-radius:${i === 0 ? "10px 10px 0 0" : i === features.length-1 ? "0 0 10px 10px" : "0"};">
+      const influenced = features.filter(f => f.v.label !== "Normal");
+      const display = influenced.length > 0 ? influenced : features;
+      const rowsHtml = display.map((f, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;${i % 2 === 0 ? "background:#0d0d0d;" : "background:#111;"}border-bottom:1px solid #1a1a1a;border-radius:${i === 0 ? "10px 10px 0 0" : i === display.length-1 ? "0 0 10px 10px" : "0"};">
           <span style="font-size:18px;flex-shrink:0;margin-top:1px;">${f.icon}</span>
           <div style="flex:1;min-width:0;">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
