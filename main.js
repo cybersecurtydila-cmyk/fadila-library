@@ -602,13 +602,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
       const referrer  = document.referrer || null;
 
-      // collect missing signals the backend already handles
-      const cookiesEnabled  = nav.cookieEnabled !== undefined ? nav.cookieEnabled : null;
-      const localStorageOk  = (() => { try { localStorage.setItem("_t","1"); localStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
-      const sessionStorageOk= (() => { try { sessionStorage.setItem("_t","1"); sessionStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
-      const batteryLevel    = null;
-      const batteryCharging = null;
-
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
       btn.textContent = "⏳ Vérification...";
@@ -658,13 +651,7 @@ document.addEventListener("DOMContentLoaded", () => {
         timezone_name:        tzName,
         touch_support:        touchSupport,
         online:               online,
-        network_type:         networkType,
-        cookies_enabled:      cookiesEnabled,
-        local_storage:        localStorageOk,
-        session_storage:      sessionStorageOk,
-        battery_level:        batteryLevel,
-        battery_charging:     batteryCharging,
-        email_domain:         emailDomain
+        network_type:         networkType
       };
 
       fetch("https://diladila-fadila-fraud-api.hf.space/api/predict", {
@@ -706,6 +693,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
+  function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); }
 
   renderBooks();
 });
