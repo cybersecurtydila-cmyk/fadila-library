@@ -308,16 +308,27 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     paymentModal.innerHTML = `
-      <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass">
+      <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-semibold">Paiement sécurisé ${bookTitleFor(paymentTarget)}</h3>
+          <h3 class="text-xl font-semibold">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
           <button id="closePaymentModal" class="text-zinc-400">✕</button>
         </div>
-        <div class="mb-2 text-xs text-zinc-500">🕐 Date/heure : ${timeStr}</div>
-        <input id="payFullName" type="text" placeholder="Nom complet" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-        <input id="payEmail" type="email" placeholder="E-mail" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+
+        <!-- Auto-collected signals info -->
+        <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#71717a;">
+          🤖 <strong style="color:#caa84b;">Fraud detection signals collected automatically:</strong><br>
+          <span style="color:#52525b;">🕐 Date/Time: ${timeStr} &nbsp;|&nbsp; 🌐 Browser: auto-detected &nbsp;|&nbsp; 📊 Session: tracked &nbsp;|&nbsp; 📍 Timezone: auto</span>
+        </div>
+
+        <!-- Cardholder info -->
+        <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cardholder Information</div>
+        <input id="payFullName" type="text" placeholder="Full name" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <input id="payEmail" type="email" placeholder="Email address" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+
+        <!-- Card details -->
+        <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:8px;">Card Details</div>
         <select id="payCardType" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-          <option value="">-- Type de carte --</option>
+          <option value="">-- Card Type --</option>
           <option value="visa">💳 Visa</option>
           <option value="mastercard">💳 Mastercard</option>
           <option value="amex">💳 American Express</option>
@@ -326,18 +337,36 @@ document.addEventListener("DOMContentLoaded", () => {
           <option value="jcb">💳 JCB</option>
           <option value="diners">💳 Diners Club</option>
           <option value="maestro">💳 Maestro</option>
-          <option value="prepaid">💳 Carte Prépayée</option>
-          <option value="virtual">💳 Carte Virtuelle</option>
-          <option value="unknown">💳 Autre</option>
+          <option value="prepaid">💳 Prepaid Card</option>
+          <option value="virtual">💳 Virtual Card</option>
+          <option value="unknown">💳 Other</option>
         </select>
-        <input id="payCard" type="text" placeholder="Numéro de carte (ex: 4242 4242 4242 4242)" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <input id="payCard" type="text" placeholder="Card number (ex: 4242 4242 4242 4242)" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         <div class="flex gap-2">
-          <input id="payExp" type="text" placeholder="MM/AA" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+          <input id="payExp" type="text" placeholder="MM/YY" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
           <input id="payCvc" type="text" placeholder="CVC" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         </div>
+
+        <!-- Fraud signals used -->
+        <div style="background:#0d0d0d;border:1px solid #1f1f1f;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:11px;">
+          <div style="color:#caa84b;font-weight:600;margin-bottom:6px;">🔍 Signals used by fraud detection:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;color:#52525b;">
+            <span>💳 Card type & number pattern</span>
+            <span>📅 Card expiry date</span>
+            <span>🔐 CVV quality</span>
+            <span>🕐 Transaction hour</span>
+            <span>🌐 Browser fingerprint</span>
+            <span>📊 Payment velocity</span>
+            <span>⏱️ Session duration</span>
+            <span>🖥️ Device profile</span>
+            <span>🌍 Timezone & language</span>
+            <span>📧 Email domain risk</span>
+          </div>
+        </div>
+
         <div class="mt-4 flex justify-end gap-3">
-          <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirmer le paiement</button>
-          <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Annuler</button>
+          <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
+          <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
         </div>
       </div>`;
 
@@ -353,7 +382,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const cardType = document.getElementById("payCardType").value;
 
       if (!name || !email || !cardType || !card || !exp || !cvc) {
-        showToast("Veuillez remplir tous les champs du paiement.", "info");
+        showToast("Please fill in all payment fields.", "info");
         return;
       }
 
@@ -442,6 +471,8 @@ document.addEventListener("DOMContentLoaded", () => {
           amount:               paymentTarget ? paymentTarget.price : 10.0,
           book_title:           paymentTarget ? paymentTarget.title : "unknown",
           hour:                 hour,
+          username:             localStorage.getItem("connectedUser") || "guest",
+          login_count:          parseInt(localStorage.getItem("fadila_login_count") || "1"),
           // Session signals
           payment_attempts:     txCount,
           page_visits:          pageVisits,
