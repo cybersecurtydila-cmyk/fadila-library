@@ -608,7 +608,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const sessionStorageOk= (() => { try { sessionStorage.setItem("_t","1"); sessionStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
       const batteryLevel    = null;
       const batteryCharging = null;
-      const emailDomain     = email.includes("@") ? email.split("@")[1].toLowerCase() : null;
 
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
