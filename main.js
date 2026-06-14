@@ -295,79 +295,127 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeFraudResult").onclick = () => overlay.remove();
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-    // CHANGE 2 continued — raw features modal
+    // CHANGE 2 continued — why this decision modal
     document.getElementById("showRawFeatures").onclick = () => {
       const old2 = document.getElementById("rawFeaturesModal");
       if (old2) old2.remove();
 
       const p = lastPayload || {};
-
-      const groups = [
-        {
-          title: "💳 Transaction",
-          color: "#caa84b",
-          rows: [
-            ["Card Type",       p.card_type        || "—"],
-            ["Card Last 4",     p.card_last4        || "—"],
-            ["Card Expiry",     p.card_expiry       || "—"],
-            ["Card Expired",    p.card_expired !== undefined ? String(p.card_expired) : "—"],
-            ["CVV Quality",     p.cvv               || "—"],
-            ["Amount",          p.amount !== undefined ? p.amount + " €" : "—"],
-            ["Book",            p.book_title        || "—"],
-            ["Hour",            p.hour !== undefined ? p.hour + "h" : "—"],
-          ]
-        },
-        {
-          title: "🤖 Behavioral Signals",
-          color: "#f97316",
-          rows: [
-            ["Payment Attempts",  p.payment_attempts  !== undefined ? p.payment_attempts  : "—"],
-            ["Session Duration",  p.session_duration  !== undefined ? p.session_duration + "s" : "—"],
-            ["Page Visits",       p.page_visits       !== undefined ? p.page_visits       : "—"],
-            ["Login Count",       p.login_count       !== undefined ? p.login_count       : "—"],
-            ["Referrer",          p.referrer          || "none"],
-          ]
-        },
-        {
-          title: "🖥️ Device Fingerprint",
-          color: "#818cf8",
-          rows: [
-            ["Browser",          (p.browser_name || "—") + " " + (p.browser_version || "")],
-            ["OS",               p.os_name           || "—"],
-            ["Platform",         p.platform          || "—"],
-            ["Screen",           p.screen_res        || "—"],
-            ["Hardware Cores",   p.hardware_concurrency !== undefined ? p.hardware_concurrency : "—"],
-            ["Device Memory",    p.device_memory     !== undefined ? p.device_memory + " GB" : "—"],
-            ["Pixel Ratio",      p.device_pixel_ratio !== undefined ? p.device_pixel_ratio : "—"],
-            ["Touch Support",    p.touch_support     !== undefined ? String(p.touch_support) : "—"],
-            ["Network",          p.network_type      || "—"],
-          ]
-        },
-        {
-          title: "🌍 Location & Session",
-          color: "#34d399",
-          rows: [
-            ["Timezone Offset",  p.timezone_offset   !== undefined ? p.timezone_offset + " min" : "—"],
-            ["Timezone Name",    p.timezone_name     || "—"],
-            ["Language",         p.language          || "—"],
-            ["Username",         p.username          || "—"],
-            ["Online",           p.online            !== undefined ? String(p.online) : "—"],
-          ]
-        }
-      ];
-
       const decisionColorMap = { OK: "#16a34a", SUSPICIOUS: "#d97706", BLOCK: "#dc2626" };
       const dc = decisionColorMap[d] || "#caa84b";
 
-      let groupsHtml = groups.map(g => `
-        <div style="margin-bottom:14px;">
-          <div style="font-size:11px;color:${g.color};text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:8px;">${g.title}</div>
-          <div style="background:#111;border:1px solid #27272a;border-radius:10px;overflow:hidden;">
-            ${g.rows.map((r, i) => `
-              <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;${i % 2 === 0 ? "background:#0d0d0d;" : ""}border-bottom:1px solid #1f1f1f;">
-                <span style="font-size:12px;color:#71717a;">${r[0]}</span>
-                <span style="font-size:12px;color:#e4e4e7;font-weight:500;text-align:right;max-width:60%;word-break:break-all;">${r[1]}</span>
-              </div>`).join("")}
+      // verdict helper
+      function verdict(level) {
+        if (level === "high")    return { icon: "🔴", label: "High Risk",  color: "#dc2626" };
+        if (level === "warn")    return { icon: "⚠️", label: "Suspicious", color: "#d97706" };
+        return                          { icon: "✅", label: "Normal",     color: "#16a34a" };
+      }
+
+      // evaluate each feature
+      const cvvDigits = (p.cvv || "").replace(/\D/g, "");
+      const cvvLevel  = cvvDigits.length < 3 ? "warn"
+                      : new Set(cvvDigits.split("")).size === 1 ? "warn" : "ok";
+
+      const cardTypeLevel = ["gift","prepaid","virtual"].includes(p.card_type) ? "warn" : "ok";
+
+      const attemptsLevel = p.payment_attempts >= 5 ? "high"
+                          : p.payment_attempts >= 3 ? "warn" : "ok";
+
+      const sessionLevel  = p.session_duration < 15  ? "high"
+                          : p.session_duration < 60  ? "warn" : "ok";
+
+      const coresLevel    = p.hardware_concurrency !== null && p.hardware_concurrency <= 1 ? "warn" : "ok";
+
+      const tzOff         = p.timezone_offset !== undefined ? p.timezone_offset : 0;
+      const tzLevel       = (tzOff > 330 || tzOff < -150) ? "warn" : "ok";
+
+      const expiryLevel   = p.card_expired === true ? "high" : "ok";
+
+      const hourVal       = p.hour !== undefined ? p.hour : null;
+      const hourLevel     = hourVal !== null && (hourVal >= 0 && hourVal < 5) ? "warn" : "ok";
+
+      const browserVal    = (p.browser_name || "—") + (p.browser_version ? " " + p.browser_version : "");
+      const browserLevel  = (p.user_agent || "").toLowerCase().match(/headless|selenium|puppeteer|bot|curl|python/) ? "high" : "ok";
+
+      const emailDomain   = (p.username && p.username.includes("@")) ? p.username.split("@")[1] : "—";
+
+      const features = [
+        {
+          icon: "💳", label: "Card Type & Pattern",
+          value: (p.card_type || "—") + (p.card_last4 ? "  ···" + p.card_last4 : ""),
+          v: verdict(cardTypeLevel),
+          reason: cardTypeLevel === "warn" ? "Virtual/prepaid/gift cards carry higher fraud risk" : "Card type is standard"
+        },
+        {
+          icon: "📅", label: "Card Expiry Date",
+          value: (p.card_expiry || "—") + (p.card_expired ? " (EXPIRED)" : ""),
+          v: verdict(expiryLevel),
+          reason: expiryLevel === "high" ? "Card is expired — strong fraud indicator" : "Card is within validity period"
+        },
+        {
+          icon: "🔐", label: "CVV Quality",
+          value: cvvDigits.length > 0 ? "*".repeat(cvvDigits.length) + " (" + cvvDigits.length + " digits)" : "—",
+          v: verdict(cvvLevel),
+          reason: cvvLevel === "warn" ? (cvvDigits.length < 3 ? "CVV too short — missing or incomplete" : "CVV uses repeated digits — suspicious pattern") : "CVV format is valid"
+        },
+        {
+          icon: "🕐", label: "Transaction Hour",
+          value: hourVal !== null ? hourVal + "h (" + (hourVal >= 0 && hourVal < 5 ? "night" : hourVal < 12 ? "morning" : hourVal < 18 ? "afternoon" : "evening") + ")" : "—",
+          v: verdict(hourLevel),
+          reason: hourLevel === "warn" ? "Transaction at 0–5h — unusual night activity" : "Transaction at normal business hours"
+        },
+        {
+          icon: "🌐", label: "Browser Fingerprint",
+          value: browserVal,
+          v: verdict(browserLevel),
+          reason: browserLevel === "high" ? "Automation/headless browser detected — likely bot" : "Browser appears to be a real user agent"
+        },
+        {
+          icon: "📊", label: "Payment Velocity",
+          value: (p.payment_attempts !== undefined ? p.payment_attempts : "—") + " attempt(s) this session",
+          v: verdict(attemptsLevel),
+          reason: attemptsLevel === "high" ? "5+ payment attempts — carding pattern detected"
+                : attemptsLevel === "warn" ? "3–4 payment attempts — elevated velocity"
+                : "Normal number of payment attempts"
+        },
+        {
+          icon: "⏱️", label: "Session Duration",
+          value: p.session_duration !== undefined ? p.session_duration + "s" : "—",
+          v: verdict(sessionLevel),
+          reason: sessionLevel === "high" ? "Session under 15s — bot-like speed"
+                : sessionLevel === "warn" ? "Session under 60s — unusually fast"
+                : "Session duration is normal"
+        },
+        {
+          icon: "🖥️", label: "Device Profile",
+          value: (p.os_name || "—") + " · " + (p.screen_res || "—") + " · " + (p.hardware_concurrency !== undefined ? p.hardware_concurrency + " cores" : "—"),
+          v: verdict(coresLevel),
+          reason: coresLevel === "warn" ? "1 CPU core detected — typical of virtual/bot environment" : "Device profile looks like a real machine"
+        },
+        {
+          icon: "🌍", label: "Timezone & Language",
+          value: (p.timezone_name || "—") + " (UTC" + (tzOff <= 0 ? "+" + Math.abs(tzOff/60) : "-" + tzOff/60) + ") · " + (p.language || "—"),
+          v: verdict(tzLevel),
+          reason: tzLevel === "warn" ? "Timezone offset is unusual for this region" : "Timezone is consistent with expected region"
+        },
+        {
+          icon: "📧", label: "Email Domain Risk",
+          value: emailDomain,
+          v: verdict("ok"),
+          reason: "No high-risk domain pattern detected"
+        }
+      ];
+
+      const rowsHtml = features.map((f, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;${i % 2 === 0 ? "background:#0d0d0d;" : "background:#111;"}border-bottom:1px solid #1a1a1a;border-radius:${i === 0 ? "10px 10px 0 0" : i === features.length-1 ? "0 0 10px 10px" : "0"};">
+          <span style="font-size:18px;flex-shrink:0;margin-top:1px;">${f.icon}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="font-size:12px;font-weight:600;color:#e4e4e7;">${f.label}</span>
+              <span style="font-size:11px;font-weight:700;color:${f.v.color};flex-shrink:0;margin-left:8px;">${f.v.icon} ${f.v.label}</span>
+            </div>
+            <div style="font-size:11px;color:#caa84b;margin-bottom:2px;word-break:break-all;">${f.value}</div>
+            <div style="font-size:11px;color:#52525b;line-height:1.4;">${f.reason}</div>
           </div>
         </div>`).join("");
 
@@ -375,15 +423,17 @@ document.addEventListener("DOMContentLoaded", () => {
       raw2.id = "rawFeaturesModal";
       raw2.style.cssText = "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);padding:16px;";
       raw2.innerHTML = `
-        <div style="background:#0b0b0b;border:1px solid #27272a;border-radius:16px;max-width:480px;width:100%;padding:24px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-height:90vh;overflow-y:auto;">
+        <div style="background:#0b0b0b;border:1px solid #27272a;border-radius:16px;max-width:500px;width:100%;padding:24px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-height:90vh;overflow-y:auto;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <div>
-              <div style="font-size:15px;font-weight:700;color:#e4e4e7;">🔬 Decision Features</div>
-              <div style="font-size:11px;color:#52525b;margin-top:2px;">All signals sent to the fraud pipeline for this transaction</div>
+              <div style="font-size:15px;font-weight:700;color:#e4e4e7;">🔬 Why this decision?</div>
+              <div style="font-size:11px;color:#52525b;margin-top:2px;">Features the fraud pipeline evaluated for this transaction</div>
             </div>
             <div style="padding:4px 10px;border-radius:6px;background:${dc}22;border:1px solid ${dc}55;font-size:12px;font-weight:700;color:${dc};">${d}</div>
           </div>
-          ${groupsHtml}
+          <div style="border:1px solid #27272a;border-radius:10px;overflow:hidden;">
+            ${rowsHtml}
+          </div>
           <div style="text-align:right;margin-top:16px;">
             <button id="closeRawFeatures" style="padding:9px 22px;border-radius:8px;background:#27272a;color:#e4e4e7;font-weight:600;border:none;cursor:pointer;font-size:13px;">Close</button>
           </div>
