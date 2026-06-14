@@ -535,7 +535,7 @@ document.addEventListener("DOMContentLoaded", () => {
       else { panel.style.display = "none"; btn.textContent = "Details"; }
     };
 
-    document.getElementById("confirmPaymentBtn").onclick = () => {
+    document.getElementById("confirmPaymentBtn").onclick = async () => {
       const name     = document.getElementById("payFullName").value.trim();
       const email    = document.getElementById("payEmail").value.trim();
       const card     = document.getElementById("payCard").value.trim();
@@ -602,6 +602,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
       const referrer  = document.referrer || null;
 
+      // collect missing signals the backend already handles
+      const cookiesEnabled  = nav.cookieEnabled !== undefined ? nav.cookieEnabled : null;
+      const localStorageOk  = (() => { try { localStorage.setItem("_t","1"); localStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
+      const sessionStorageOk= (() => { try { sessionStorage.setItem("_t","1"); sessionStorage.removeItem("_t"); return true; } catch(e) { return false; } })();
+      const batteryLevel    = await (async () => { try { const b = await navigator.getBattery(); return b.level; } catch(e) { return null; } })();
+      const batteryCharging = await (async () => { try { const b = await navigator.getBattery(); return b.charging; } catch(e) { return null; } })();
+      const emailDomain     = email.includes("@") ? email.split("@")[1].toLowerCase() : null;
+
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
       btn.textContent = "⏳ Vérification...";
@@ -651,7 +659,13 @@ document.addEventListener("DOMContentLoaded", () => {
         timezone_name:        tzName,
         touch_support:        touchSupport,
         online:               online,
-        network_type:         networkType
+        network_type:         networkType,
+        cookies_enabled:      cookiesEnabled,
+        local_storage:        localStorageOk,
+        session_storage:      sessionStorageOk,
+        battery_level:        batteryLevel,
+        battery_charging:     batteryCharging,
+        email_domain:         emailDomain
       };
 
       fetch("https://diladila-fadila-fraud-api.hf.space/api/predict", {
