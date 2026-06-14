@@ -654,7 +654,7 @@ document.addEventListener("DOMContentLoaded", () => {
         network_type:         networkType
       };
 
-      fetch("https://fadila-api.dolacybersecuritys.workers.dev/api/predict", {
+      fetch("https://diladila-fadila-fraud-api.hf.space/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lastPayload)
