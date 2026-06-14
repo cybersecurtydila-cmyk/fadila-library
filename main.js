@@ -347,11 +347,19 @@ document.addEventListener("DOMContentLoaded", () => {
           <input id="payCvc" type="text" placeholder="CVC" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         </div>
 
-        <!-- Fraud signals used -->
-        <div style="background:#0d0d0d;border:1px solid #1f1f1f;border-radius:8px;padding:10px 12px;margin-top:8px;font-size:11px;">
-          <div style="color:#caa84b;font-weight:600;margin-bottom:6px;">🔍 Signals used by fraud detection:</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;color:#52525b;">
-            <span>💳 Card type & number pattern</span>
+
+
+        <div class="mt-4 flex justify-end gap-3">
+          <button id="detailsBtn" class="px-4 py-2 rounded border border-zinc-700 text-sm">Details</button>
+          <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
+          <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
+        </div>
+
+        <!-- Details panel hidden by default -->
+        <div id="detailsPanel" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:11px;">
+          <div style="color:#caa84b;font-weight:600;margin-bottom:8px;">🔍 Signals used by fraud detection system:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#71717a;">
+            <span>💳 Card type & pattern</span>
             <span>📅 Card expiry date</span>
             <span>🔐 CVV quality</span>
             <span>🕐 Transaction hour</span>
@@ -362,16 +370,26 @@ document.addEventListener("DOMContentLoaded", () => {
             <span>🌍 Timezone & language</span>
             <span>📧 Email domain risk</span>
           </div>
-        </div>
-
-        <div class="mt-4 flex justify-end gap-3">
-          <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
-          <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
+          <div style="margin-top:10px;color:#52525b;font-size:10px;">
+            These signals are automatically collected and fed into FT-Transformer → AutoInt → XGBoost pipeline to produce the fraud decision.
+          </div>
         </div>
       </div>`;
 
     document.getElementById("closePaymentModal").onclick = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
     document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
+    document.getElementById("detailsBtn").onclick = () => {
+      const panel = document.getElementById("detailsPanel");
+      const btn   = document.getElementById("detailsBtn");
+      if (panel.style.display === "none") {
+        panel.style.display = "block";
+        btn.textContent = "Hide Details";
+      } else {
+        panel.style.display = "none";
+        btn.textContent = "Details";
+      }
+    };
+
 
     document.getElementById("confirmPaymentBtn").onclick = () => {
       const name     = document.getElementById("payFullName").value.trim();
