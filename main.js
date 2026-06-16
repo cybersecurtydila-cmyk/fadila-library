@@ -469,7 +469,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     paymentModal.innerHTML = `
-      <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
+      <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-xl font-semibold">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
           <button id="closePaymentModal" class="text-zinc-400">✕</button>
