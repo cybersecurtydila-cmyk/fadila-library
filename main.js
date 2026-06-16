@@ -322,7 +322,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const coresLevel    = p.hardware_concurrency !== null && p.hardware_concurrency <= 1 ? "warn" : "ok";
       const tzOff         = p.timezone_offset !== undefined ? p.timezone_offset : 0;
       const tzLevel       = (tzOff > 330 || tzOff < -150) ? "warn" : "ok";
-      const expiryLevel   = p.card_expired === true ? "high" : "ok";
+      // Re-calculate expiry in case card_expired flag is wrong
+      const expiryLevel = (() => {
+        if (p.card_expired === true) return "high";
+        if (!p.card_expiry) return "ok";
+        const ep = p.card_expiry.trim().split("/");
+        if (ep.length !== 2) return "ok";
+        const eM = parseInt(ep[0], 10);
+        const eYr = ep[1].trim();
+        const eY = eYr.length <= 2 ? 2000 + parseInt(eYr, 10) : parseInt(eYr, 10);
+        if (isNaN(eM) || isNaN(eY)) return "ok";
+        const now5 = new Date();
+        return ((eY < now5.getFullYear()) || (eY === now5.getFullYear() && eM < now5.getMonth() + 1)) ? "high" : "ok";
+      })();
       const hourVal       = p.hour !== undefined ? p.hour : new Date().getHours();
       const hourLevel     = (hourVal >= 0 && hourVal <= 5) ? "warn" : "ok";
       const browserLevel  = (p.user_agent || "").toLowerCase().match(/headless|selenium|puppeteer|bot|curl|python/) ? "high" : "ok";
@@ -337,7 +349,7 @@ document.addEventListener("DOMContentLoaded", () => {
         },
         {
           icon: "📅", label: "Card Expiry Date",
-          value: (p.card_expiry || "—") + (p.card_expired ? " ⚠️ EXPIRED" : " ✓ Valid"),
+          value: (p.card_expiry || "—") + (expiryLevel === "high" ? " ⚠️ EXPIRED" : " ✓ Valid"),
           v: verdict(expiryLevel),
           reason: expiryLevel === "high" ? "Card is expired — strong fraud indicator (+0.30 risk boost)" : "Card is within validity period"
         },
