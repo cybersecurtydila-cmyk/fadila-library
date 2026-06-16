@@ -140,9 +140,14 @@ document.addEventListener("DOMContentLoaded", () => {
   if (modalCancel) modalCancel.onclick = () => modal.classList.add("hidden");
 
   // ═══════════════════════════════════════════════════════════════════════
+  //  CHANGE 1 — outer scope variable to hold last payload
+  // ═══════════════════════════════════════════════════════════════════════
+  let lastPayload = null;
+
+  // ═══════════════════════════════════════════════════════════════════════
   //  FRAUD RESULT MODAL
   // ═══════════════════════════════════════════════════════════════════════
-  function showFraudResult(data, cardType, expiry) {
+  function showFraudResult(data, cardType) {
     const old = document.getElementById("fraudResultModal");
     if (old) old.remove();
 
@@ -169,7 +174,6 @@ document.addEventListener("DOMContentLoaded", () => {
       const exps     = data.shap.explanations  || [];
       const baseVal  = data.shap.base_value !== undefined ? data.shap.base_value.toFixed(5) : "—";
 
-      // contributions bars
       let contribRows = "";
       if (contribs.length > 0) {
         const maxAbs = Math.max(...contribs.map(f => Math.abs(f.shap)), 0.001);
@@ -189,7 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }).join("");
       }
 
-      // explanations bullets
       let expRows = "";
       if (exps.length > 0) {
         expRows = exps.map(e => {
@@ -214,7 +217,6 @@ document.addEventListener("DOMContentLoaded", () => {
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:14px;margin-bottom:10px;">
             ${expRows}
           </div>` : ""}
-
         </div>`;
     }
 
@@ -249,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
 
-        <!-- Stats grid (5 tiles, no AUC) -->
+        <!-- Stats grid -->
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
           <div style="background:#111;border:1px solid #27272a;border-radius:10px;padding:11px 13px;">
             <div style="font-size:10px;color:#71717a;text-transform:uppercase;letter-spacing:1px;">💳 Carte détectée</div>
@@ -282,10 +284,9 @@ document.addEventListener("DOMContentLoaded", () => {
         <!-- SHAP -->
         ${shapHtml}
 
-
-        <!-- Close -->
-        <div style="margin-top:20px;display:flex;justify-content:space-between;align-items:center;">
-          <button id="showRawFeatures" style="padding:10px 18px;border-radius:8px;background:#18181b;color:#caa84b;font-weight:600;border:1px solid #caa84b;cursor:pointer;font-size:13px;">🔬 Why this decision?</button>
+        <!-- CHANGE 2 — buttons row with new Raw Features button -->
+        <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+          ${d === "SUSPICIOUS" || d === "BLOCK" ? `<button id="showRawFeatures" style="padding:10px 18px;border-radius:8px;background:#18181b;color:#caa84b;font-weight:600;border:1px solid #caa84b;cursor:pointer;font-size:13px;">🔬 Why this decision?</button>` : ""}
           <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">${d === "BLOCK" ? "Fermer" : "Valider"}</button>
         </div>
       </div>`;
@@ -294,159 +295,154 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeFraudResult").onclick = () => overlay.remove();
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-    // Set email domain in details panel
-    const fdEmail = document.getElementById("fdEmailDomain");
-    if (fdEmail && data._email_domain) fdEmail.textContent = data._email_domain;
-
-    // Why this decision? button
+    // CHANGE 2 continued — why this decision modal (only for SUSPICIOUS/BLOCK)
     const rawBtn = document.getElementById("showRawFeatures");
     if (rawBtn) rawBtn.onclick = () => {
       const old2 = document.getElementById("rawFeaturesModal");
       if (old2) old2.remove();
 
-      const p = lastPayload || {};
+      if (!lastPayload) { showToast("No transaction data available.", "info"); return; }
+      const p = lastPayload;
       const decisionColorMap = { OK: "#16a34a", SUSPICIOUS: "#d97706", BLOCK: "#dc2626" };
       const dc = decisionColorMap[d] || "#caa84b";
 
+      // verdict helper
       function verdict(level) {
-        if (level === "high") return { icon: "🔴", label: "High Risk",  color: "#dc2626" };
-        if (level === "warn") return { icon: "⚠️", label: "Suspicious", color: "#d97706" };
-        return                       { icon: "✅", label: "Normal",     color: "#16a34a" };
+        if (level === "high")    return { icon: "🔴", label: "High Risk",  color: "#dc2626" };
+        if (level === "warn")    return { icon: "⚠️", label: "Suspicious", color: "#d97706" };
+        return                          { icon: "✅", label: "Normal",     color: "#16a34a" };
       }
 
-      const cvvDigits   = (p.cvv || "").replace(/\D/g, "");
-      const cvvLevel    = cvvDigits.length < 3 ? "warn" : new Set(cvvDigits.split("")).size === 1 ? "warn" : "ok";
-      const cardTypeLevel = ["gift","prepaid","virtual"].includes((p.card_type||"").toLowerCase()) ? "warn" : "ok";
-      const attemptsLevel = p.payment_attempts >= 20 ? "high" : p.payment_attempts >= 5 ? "warn" : "ok";
-      const sessionLevel  = p.session_duration < 15  ? "high" : p.session_duration < 60 ? "warn" : "ok";
+      // evaluate each feature
+      const cvvDigits = (p.cvv || "").replace(/\D/g, "");
+      const cvvLevel  = cvvDigits.length < 3 ? "warn"
+                      : new Set(cvvDigits.split("")).size === 1 ? "warn" : "ok";
+
+      const cardTypeLevel = ["gift","prepaid","virtual","unknown"].includes(p.card_type) ? "warn" : "ok";
+
+      const attemptsLevel = p.payment_attempts >= 5 ? "high"
+                          : p.payment_attempts >= 3 ? "warn" : "ok";
+
+      const sessionLevel  = p.session_duration < 15  ? "high"
+                          : p.session_duration < 60  ? "warn" : "ok";
+
       const coresLevel    = p.hardware_concurrency !== null && p.hardware_concurrency <= 1 ? "warn" : "ok";
+
       const tzOff         = p.timezone_offset !== undefined ? p.timezone_offset : 0;
       const tzLevel       = (tzOff > 330 || tzOff < -150) ? "warn" : "ok";
-      // Re-calculate expiry in case card_expired flag is wrong
-      const expiryLevel = (() => {
-        if (p.card_expired === true) return "high";
-        if (!p.card_expiry) return "ok";
-        const ep = p.card_expiry.trim().split("/");
-        if (ep.length !== 2) return "ok";
-        const eM = parseInt(ep[0], 10);
-        const eYr = ep[1].trim();
-        const eY = eYr.length <= 2 ? 2000 + parseInt(eYr, 10) : parseInt(eYr, 10);
-        if (isNaN(eM) || isNaN(eY)) return "ok";
-        const now5 = new Date();
-        return ((eY < now5.getFullYear()) || (eY === now5.getFullYear() && eM < now5.getMonth() + 1)) ? "high" : "ok";
-      })();
-      const hourVal       = p.hour !== undefined ? p.hour : new Date().getHours();
-      const hourLevel     = (hourVal >= 0 && hourVal <= 5) ? "warn" : "ok";
+
+      const expiryLevel   = (p.card_expired === true || p.card_expired === "true") ? "high" : "ok";
+
+      const hourVal       = p.hour !== undefined ? p.hour : null;
+      const hourLevel     = hourVal !== null && (hourVal >= 0 && hourVal < 5) ? "warn" : "ok";
+
+      const browserVal    = (p.browser_name || "—") + (p.browser_version ? " " + p.browser_version : "");
       const browserLevel  = (p.user_agent || "").toLowerCase().match(/headless|selenium|puppeteer|bot|curl|python/) ? "high" : "ok";
-      const emailDomain   = (p.email_domain || (p.username && p.username.includes("@") ? p.username.split("@")[1] : null) || "—");
+
+      const emailDomain   = (p.username && p.username.includes("@")) ? p.username.split("@")[1] : "—";
 
       const features = [
         {
           icon: "💳", label: "Card Type & Pattern",
-          value: (p.card_type || "—").charAt(0).toUpperCase() + (p.card_type || "—").slice(1) + (p.card_last4 ? "  ···" + p.card_last4 : ""),
+          value: (p.card_type || "—") + (p.card_last4 ? "  ···" + p.card_last4 : ""),
           v: verdict(cardTypeLevel),
-          reason: cardTypeLevel === "warn" ? "Virtual/prepaid/gift cards carry higher fraud risk in IEEE-CIS" : "Card type is standard — low risk"
+          reason: cardTypeLevel === "warn" ? "Virtual/prepaid/gift cards carry higher fraud risk" : "Card type is standard"
         },
         {
           icon: "📅", label: "Card Expiry Date",
-          value: (p.card_expiry || "—") + (expiryLevel === "high" ? " ⚠️ EXPIRED" : " ✓ Valid"),
+          value: (p.card_expiry || "—") + (p.card_expired ? " (EXPIRED)" : ""),
           v: verdict(expiryLevel),
-          reason: expiryLevel === "high" ? "Card is expired — strong fraud indicator (+0.30 risk boost)" : "Card is within validity period"
+          reason: expiryLevel === "high" ? "Card is expired or has invalid format — strong fraud indicator" : "Card is within validity period"
         },
         {
           icon: "🔐", label: "CVV Quality",
-          value: cvvDigits.length > 0 ? "•".repeat(cvvDigits.length) + " (" + cvvDigits.length + " digits)" : "—",
+          value: cvvDigits.length > 0 ? "*".repeat(cvvDigits.length) + " (" + cvvDigits.length + " digits)" : "—",
           v: verdict(cvvLevel),
-          reason: cvvLevel === "warn" ? (cvvDigits.length < 3 ? "CVV too short — missing or incomplete" : "CVV uses repeated digits — suspicious pattern") : "CVV format and pattern are valid"
+          reason: cvvLevel === "warn" ? (cvvDigits.length < 3 ? "CVV too short — missing or incomplete" : "CVV uses repeated digits — suspicious pattern") : "CVV format is valid"
         },
         {
           icon: "🕐", label: "Transaction Hour",
-          value: hourVal + "h (" + (hourVal >= 0 && hourVal < 5 ? "🌙 night" : hourVal < 12 ? "🌅 morning" : hourVal < 18 ? "☀️ afternoon" : "🌆 evening") + ")",
+          value: hourVal !== null ? hourVal + "h (" + (hourVal >= 0 && hourVal < 5 ? "night" : hourVal < 12 ? "morning" : hourVal < 18 ? "afternoon" : "evening") + ")" : "—",
           v: verdict(hourLevel),
-          reason: hourLevel === "warn" ? "Transaction between 0–5h — fraud peak hours in IEEE-CIS dataset" : "Transaction at normal business hours"
+          reason: hourLevel === "warn" ? "Transaction at 0–5h — unusual night activity" : "Transaction at normal business hours"
         },
         {
           icon: "🌐", label: "Browser Fingerprint",
-          value: (p.browser_name || "—") + (p.browser_version ? " " + p.browser_version : "") + " · " + (p.os_name || "—"),
+          value: browserVal,
           v: verdict(browserLevel),
-          reason: browserLevel === "high" ? "Automation/headless browser detected — likely bot" : "Browser appears to be a genuine user agent"
+          reason: browserLevel === "high" ? "Automation/headless browser detected — likely bot" : "Browser appears to be a real user agent"
         },
         {
           icon: "📊", label: "Payment Velocity",
           value: (p.payment_attempts !== undefined ? p.payment_attempts : "—") + " attempt(s) this session",
           v: verdict(attemptsLevel),
-          reason: attemptsLevel === "high" ? "20+ payment attempts — carding pattern detected" : attemptsLevel === "warn" ? "5+ payment attempts — elevated velocity" : "Normal number of payment attempts"
+          reason: attemptsLevel === "high" ? "5+ payment attempts — carding pattern detected"
+                : attemptsLevel === "warn" ? "3–4 payment attempts — elevated velocity"
+                : "Normal number of payment attempts"
         },
         {
           icon: "⏱️", label: "Session Duration",
-          value: p.session_duration !== undefined ? p.session_duration + " seconds" : "—",
+          value: p.session_duration !== undefined ? p.session_duration + "s" : "—",
           v: verdict(sessionLevel),
-          reason: sessionLevel === "high" ? "Session under 15s — bot-like speed" : sessionLevel === "warn" ? "Session under 60s — unusually fast browsing" : "Session duration is normal"
+          reason: sessionLevel === "high" ? "Session under 15s — bot-like speed"
+                : sessionLevel === "warn" ? "Session under 60s — unusually fast"
+                : "Session duration is normal"
         },
         {
           icon: "🖥️", label: "Device Profile",
-          value: (p.screen_res || "—") + " · " + (p.hardware_concurrency !== undefined ? p.hardware_concurrency + " cores" : "—") + " · " + (p.device_memory !== undefined ? p.device_memory + "GB RAM" : "—"),
+          value: (p.os_name || "—") + " · " + (p.screen_res || "—") + " · " + (p.hardware_concurrency !== undefined ? p.hardware_concurrency + " cores" : "—"),
           v: verdict(coresLevel),
-          reason: coresLevel === "warn" ? "1 CPU core — typical of virtual/bot environment" : "Device profile looks like a real machine"
+          reason: coresLevel === "warn" ? "1 CPU core detected — typical of virtual/bot environment" : "Device profile looks like a real machine"
         },
         {
           icon: "🌍", label: "Timezone & Language",
-          value: (p.timezone_name || "—") + " · " + (p.language || "—"),
+          value: (p.timezone_name || "—") + " (UTC" + (tzOff <= 0 ? "+" + Math.abs(tzOff/60) : "-" + tzOff/60) + ") · " + (p.language || "—"),
           v: verdict(tzLevel),
-          reason: tzLevel === "warn" ? "Timezone is unusual for this region" : "Timezone is consistent with expected region"
+          reason: tzLevel === "warn" ? "Timezone offset is unusual for this region" : "Timezone is consistent with expected region"
         },
         {
-          icon: "📧", label: "Email Domain",
+          icon: "📧", label: "Email Domain Risk",
           value: emailDomain,
           v: verdict("ok"),
-          reason: "Email domain processed for risk scoring"
-        },
-        {
-          icon: "💰", label: "Transaction Amount",
-          value: p.amount !== undefined ? p.amount.toFixed(2) + " €" : "—",
-          v: verdict("ok"),
-          reason: "Amount feeds into C/V-columns of IEEE-CIS feature vector"
-        },
-        {
-          icon: "📱", label: "Device Touch & Network",
-          value: (p.touch_support ? "Touch ✓" : "No touch") + " · " + (p.network_type || "unknown") + " · " + (p.platform || "—"),
-          v: verdict("ok"),
-          reason: "Device signals feed into _device_risk_score() pipeline"
+          reason: "No high-risk domain pattern detected"
         }
       ];
 
-      const rowsHtml = features.map((f, i) => \`
-        <div style="display:flex;align-items:flex-start;gap:12px;padding:11px 12px;\${i % 2 === 0 ? "background:#0d0d0d;" : "background:#111;"}border-bottom:1px solid #1a1a1a;">
-          <span style="font-size:16px;flex-shrink:0;margin-top:1px;">\${f.icon}</span>
+      const alwaysShow = ["📅 Card Expiry Date", "💳 Card Type & Pattern"];
+      const influenced = features.filter(f => f.v.label !== "Normal" || alwaysShow.includes(f.label));
+      const display = influenced.length > 0 ? influenced : features;
+      const rowsHtml = display.map((f, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:12px;${i % 2 === 0 ? "background:#0d0d0d;" : "background:#111;"}border-bottom:1px solid #1a1a1a;border-radius:${i === 0 ? "10px 10px 0 0" : i === display.length-1 ? "0 0 10px 10px" : "0"};">
+          <span style="font-size:18px;flex-shrink:0;margin-top:1px;">${f.icon}</span>
           <div style="flex:1;min-width:0;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">
-              <span style="font-size:12px;font-weight:600;color:#e4e4e7;">\${f.label}</span>
-              <span style="font-size:11px;font-weight:700;color:\${f.v.color};flex-shrink:0;margin-left:8px;">\${f.v.icon} \${f.v.label}</span>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">
+              <span style="font-size:12px;font-weight:600;color:#e4e4e7;">${f.label}</span>
+              <span style="font-size:11px;font-weight:700;color:${f.v.color};flex-shrink:0;margin-left:8px;">${f.v.icon} ${f.v.label}</span>
             </div>
-            <div style="font-size:11px;color:#caa84b;margin-bottom:2px;word-break:break-all;">\${f.value}</div>
-            <div style="font-size:10px;color:#52525b;line-height:1.4;">\${f.reason}</div>
+            <div style="font-size:11px;color:#caa84b;margin-bottom:2px;word-break:break-all;">${f.value}</div>
+            <div style="font-size:11px;color:#52525b;line-height:1.4;">${f.reason}</div>
           </div>
-        </div>\`).join("");
+        </div>`).join("");
 
       const raw2 = document.createElement("div");
       raw2.id = "rawFeaturesModal";
       raw2.style.cssText = "position:fixed;inset:0;z-index:10000;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);padding:16px;";
-      raw2.innerHTML = \`
-        <div style="background:#0b0b0b;border:1px solid #27272a;border-radius:16px;max-width:500px;width:100%;padding:22px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-height:90vh;overflow-y:auto;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      raw2.innerHTML = `
+        <div style="background:#0b0b0b;border:1px solid #27272a;border-radius:16px;max-width:500px;width:100%;padding:24px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;max-height:90vh;overflow-y:auto;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
             <div>
               <div style="font-size:15px;font-weight:700;color:#e4e4e7;">🔬 Why this decision?</div>
-              <div style="font-size:11px;color:#52525b;margin-top:2px;">All features evaluated by the fraud pipeline for this transaction</div>
+              <div style="font-size:11px;color:#52525b;margin-top:2px;">Features the fraud pipeline evaluated for this transaction</div>
             </div>
-            <div style="padding:4px 10px;border-radius:6px;background:\${dc}22;border:1px solid \${dc}55;font-size:12px;font-weight:700;color:\${dc};">\${d}</div>
+            <div style="padding:4px 10px;border-radius:6px;background:${dc}22;border:1px solid ${dc}55;font-size:12px;font-weight:700;color:${dc};">${d}</div>
           </div>
           <div style="border:1px solid #27272a;border-radius:10px;overflow:hidden;">
-            \${rowsHtml}
+            ${rowsHtml}
           </div>
-          <div style="text-align:right;margin-top:14px;">
+          <div style="text-align:right;margin-top:16px;">
             <button id="closeRawFeatures" style="padding:9px 22px;border-radius:8px;background:#27272a;color:#e4e4e7;font-weight:600;border:none;cursor:pointer;font-size:13px;">Close</button>
           </div>
-        </div>\`;
+        </div>`;
 
       document.body.appendChild(raw2);
       document.getElementById("closeRawFeatures").onclick = () => raw2.remove();
@@ -462,31 +458,27 @@ document.addEventListener("DOMContentLoaded", () => {
     paymentModal.classList.remove("hidden");
     paymentModal.classList.add("flex");
 
-    // Auto time from user's PC
     const now = new Date();
-    const hour = new Date().getHours();  // use browser local time directly
+    const hour = new Date().getHours();
     const pad = n => String(n).padStart(2, "0");
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     paymentModal.innerHTML = `
-      <div class="bg-[#0b0b0b] rounded-xl max-w-md w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
+      <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-xl font-semibold">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
           <button id="closePaymentModal" class="text-zinc-400">✕</button>
         </div>
 
-        <!-- Auto-collected signals info -->
         <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#71717a;">
           🤖 <strong style="color:#caa84b;">Fraud detection signals collected automatically:</strong><br>
           <span style="color:#52525b;">🕐 Date/Time: ${timeStr} &nbsp;|&nbsp; 🌐 Browser: auto-detected &nbsp;|&nbsp; 📊 Session: tracked &nbsp;|&nbsp; 📍 Timezone: auto</span>
         </div>
 
-        <!-- Cardholder info -->
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cardholder Information</div>
         <input id="payFullName" type="text" placeholder="Full name" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         <input id="payEmail" type="email" placeholder="Email address" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
 
-        <!-- Card details -->
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:8px;">Card Details</div>
         <select id="payCardType" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
           <option value="">-- Card Type --</option>
@@ -508,18 +500,40 @@ document.addEventListener("DOMContentLoaded", () => {
           <input id="payCvc" type="text" placeholder="CVC" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
         </div>
 
-
-
         <div class="mt-4 flex justify-end gap-3">
+          <button id="detailsBtn" class="px-4 py-2 rounded border border-zinc-700 text-sm">Details</button>
           <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
           <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
         </div>
 
+        <div id="detailsPanel" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:11px;">
+          <div style="color:#caa84b;font-weight:600;margin-bottom:8px;">🔍 Signals used by fraud detection system:</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#71717a;">
+            <span>💳 Card type & pattern</span>
+            <span>📅 Card expiry date</span>
+            <span>🔐 CVV quality</span>
+            <span>🕐 Transaction hour</span>
+            <span>🌐 Browser fingerprint</span>
+            <span>📊 Payment velocity</span>
+            <span>⏱️ Session duration</span>
+            <span>🖥️ Device profile</span>
+            <span>🌍 Timezone & language</span>
+            <span>📧 Email domain risk</span>
+          </div>
+          <div style="margin-top:10px;color:#52525b;font-size:10px;">
+            These signals are automatically collected and fed into FT-Transformer → AutoInt → XGBoost pipeline to produce the fraud decision.
+          </div>
+        </div>
       </div>`;
 
     document.getElementById("closePaymentModal").onclick = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
     document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
-
+    document.getElementById("detailsBtn").onclick = () => {
+      const panel = document.getElementById("detailsPanel");
+      const btn   = document.getElementById("detailsBtn");
+      if (panel.style.display === "none") { panel.style.display = "block"; btn.textContent = "Hide Details"; }
+      else { panel.style.display = "none"; btn.textContent = "Details"; }
+    };
 
     document.getElementById("confirmPaymentBtn").onclick = () => {
       const name     = document.getElementById("payFullName").value.trim();
@@ -536,18 +550,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cardClean = card.replace(/\s+/g, "");
 
-      // ── Auto-collect all browser/session signals ─────────────────────────
       const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
       const sessionKey = "fadila_tx_count";
       const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
       localStorage.setItem(sessionKey, String(txCount));
-      console.log("[Fadila] payment_attempts =", txCount);
 
       const nav = window.navigator || {};
       const scr = window.screen   || {};
       const now2 = new Date();
 
-      // Session timing
       const sessionStart = parseInt(localStorage.getItem("fadila_session_start") || String(Date.now()));
       if (!localStorage.getItem("fadila_session_start")) localStorage.setItem("fadila_session_start", String(sessionStart));
       const sessionDuration = Math.round((Date.now() - sessionStart) / 1000);
@@ -557,7 +568,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const loginCount = parseInt(localStorage.getItem("fadila_login_count") || "0");
 
-      // Device fingerprint
       const screenWidth  = scr.width  || null;
       const screenHeight = scr.height || null;
       const colorDepth   = scr.colorDepth || null;
@@ -571,11 +581,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const online       = nav.onLine !== undefined ? nav.onLine : true;
       const networkType  = (nav.connection && nav.connection.effectiveType) || null;
 
-      // Timezone
       const tzOffset = now2.getTimezoneOffset();
       const tzName   = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 
-      // Browser info from userAgent
       let browserName = "unknown";
       let browserVersion = "unknown";
       let osName = "unknown";
@@ -593,97 +601,69 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
       const referrer  = document.referrer || null;
-      // ─────────────────────────────────────────────────────────────────────
 
       const btn = document.getElementById("confirmPaymentBtn");
       btn.disabled = true;
       btn.textContent = "⏳ Vérification...";
 
-      // Store payload for "Why this decision?" button
+      // CHANGE 1 — store payload before fetch
       lastPayload = {
-        card_type: cardType, card_expiry: exp,
-        card_expired: (() => {
-          const p2 = exp.trim().split("/");
-          if (p2.length !== 2) return false;
-          const eM = parseInt(p2[0], 10);
-          const eYraw = p2[1].trim();
-          const eY = eYraw.length <= 2 ? 2000 + parseInt(eYraw, 10) : parseInt(eYraw, 10);
-          if (isNaN(eM) || isNaN(eY) || eM < 1 || eM > 12) return false;
-          const n4 = new Date();
-          return (eY < n4.getFullYear()) || (eY === n4.getFullYear() && eM < n4.getMonth() + 1);
+        card_type:            cardType,
+        card_expiry:          exp,
+        card_expired:         (() => {
+          const clean = exp.trim().replace(/[\s\-]/g, "");
+          const parts = clean.split("/");
+          if (parts.length !== 2) return false; // unreadable = don't assume expired
+          const expMonth = parseInt(parts[0], 10);
+          const yearRaw  = parts[1].trim();
+          const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
+          if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return false;
+          const now3 = new Date();
+          const curYear  = now3.getFullYear();
+          const curMonth = now3.getMonth() + 1;
+          return (expYear < curYear) || (expYear === curYear && expMonth < curMonth);
         })(),
-        cvv: cvc, card_last4: cardClean.slice(-4),
-        amount: paymentTarget ? paymentTarget.price : 10.0,
-        hour: hour, username: localStorage.getItem("connectedUser") || "guest",
-        login_count: loginCount, email_domain: emailDomain,
-        payment_attempts: txCount, page_visits: pageVisits,
-        session_duration: sessionDuration, referrer: referrer,
-        user_agent: userAgent, browser_name: browserName,
-        browser_version: browserVersion, os_name: osName,
-        screen_res: screenRes, screen_width: screenWidth,
-        screen_height: screenHeight, hardware_concurrency: hardwareConcurrency,
-        device_memory: deviceMemory, platform: platform,
-        language: language, timezone_offset: tzOffset,
-        timezone_name: tzName, touch_support: touchSupport,
-        online: online, network_type: networkType
+        cvv:                  cvc,
+        card_last4:           cardClean.slice(-4),
+        amount:               paymentTarget ? paymentTarget.price : 10.0,
+        book_title:           paymentTarget ? paymentTarget.title : "unknown",
+        hour:                 hour,
+        username:             localStorage.getItem("connectedUser") || "guest",
+        login_count:          loginCount,
+        payment_attempts:     txCount,
+        page_visits:          pageVisits,
+        session_duration:     sessionDuration,
+        referrer:             referrer,
+        user_agent:           userAgent,
+        browser_name:         browserName,
+        browser_version:      browserVersion,
+        os_name:              osName,
+        screen_res:           screenRes,
+        screen_width:         screenWidth,
+        screen_height:        screenHeight,
+        color_depth:          colorDepth,
+        device_pixel_ratio:   devicePixelRatio,
+        hardware_concurrency: hardwareConcurrency,
+        device_memory:        deviceMemory,
+        platform:             platform,
+        language:             language,
+        timezone_offset:      tzOffset,
+        timezone_name:        tzName,
+        touch_support:        touchSupport,
+        online:               online,
+        network_type:         networkType
       };
 
-      fetch("https://fadila-api.dolacybersecuritys.workers.dev/api/predict", {
+      fetch("https://diladila-fadila-fraud-api.hf.space/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          card_type:            cardType,
-          card_expiry:          exp,
-          card_expired:         (() => {
-            const parts = exp.trim().split("/");
-            if (parts.length !== 2) return false;
-            const expMonth = parseInt(parts[0], 10);
-            const yearRaw  = parts[1].trim();
-            const expYear  = yearRaw.length <= 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
-            if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return false;
-            const now3 = new Date();
-            return (expYear < now3.getFullYear()) ||
-                   (expYear === now3.getFullYear() && expMonth < now3.getMonth() + 1);
-          })(),
-          cvv:                  cvc,
-          card_last4:           cardClean.slice(-4),
-          amount:               paymentTarget ? paymentTarget.price : 10.0,
-          book_title:           paymentTarget ? paymentTarget.title : "unknown",
-          hour:                 hour,
-          username:             localStorage.getItem("connectedUser") || "guest",
-          login_count:          loginCount,
-          email_domain:         emailDomain,
-          // Session signals
-          payment_attempts:     txCount,
-          page_visits:          pageVisits,
-          session_duration:     sessionDuration,
-          referrer:             referrer,
-          // Device fingerprint
-          user_agent:           userAgent,
-          browser_name:         browserName,
-          browser_version:      browserVersion,
-          os_name:              osName,
-          screen_res:           screenRes,
-          screen_width:         screenWidth,
-          screen_height:        screenHeight,
-          color_depth:          colorDepth,
-          device_pixel_ratio:   devicePixelRatio,
-          hardware_concurrency: hardwareConcurrency,
-          device_memory:        deviceMemory,
-          platform:             platform,
-          language:             language,
-          timezone_offset:      tzOffset,
-          timezone_name:        tzName,
-          touch_support:        touchSupport,
-          online:               online,
-          network_type:         networkType
-        })
+        body: JSON.stringify(lastPayload)
       })
       .then(r => r.json())
       .then(data => {
         paymentModal.classList.add("hidden");
         paymentModal.classList.remove("flex");
-        showFraudResult(data, cardType, exp);
+        showFraudResult(data, cardType);
         if (data.decision === "OK") {
           const cart = getCart();
           if (paymentTarget) { cart.push(paymentTarget); saveCart(cart); }
@@ -699,12 +679,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function bookTitleFor(b) { return b ? " — " + b.title : ""; }
 
-  // ----- زر demoPay -----
   if (demoPay) {
     demoPay.onclick = (e) => { e.preventDefault(); openPaymentModal(null); };
   }
 
-  // ----- بحث -----
   if (searchBtn) {
     searchBtn.onclick = () => {
       const q = prompt("Rechercher un livre (titre) :");
@@ -715,10 +693,8 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ----- سلة -----
   function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
   function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); }
 
-  // ----- Init -----
   renderBooks();
 });
