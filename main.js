@@ -340,7 +340,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const browserVal    = (p.browser_name || "—") + (p.browser_version ? " " + p.browser_version : "");
       const browserLevel  = (p.user_agent || "").toLowerCase().match(/headless|selenium|puppeteer|bot|curl|python/) ? "high" : "ok";
 
-      const emailDomain   = (p.username && p.username.includes("@")) ? p.username.split("@")[1] : "—";
+      const emailDomain = (p.username && p.username.includes("@")) ? p.username.split("@")[1].toLowerCase() : "—";
+      const disposableDomains = ["mailinator.com","guerrillamail.com","tempmail.com","throwam.com","yopmail.com","sharklasers.com","10minutemail.com","trashmail.com","fakeinbox.com","dispostable.com","maildrop.cc","spamgourmet.com","getairmail.com","mailnull.com","spamhere.net","spam4.me","mailnesia.com","discard.email"];
+      const emailDomainLevel = emailDomain === "—" ? "warn" : disposableDomains.includes(emailDomain) ? "high" : "ok";
+      const emailReason = emailDomainLevel === "high" ? "Disposable/temporary email domain — strong fraud indicator"
+                        : emailDomainLevel === "warn" ? "No email provided — cannot verify domain"
+                        : "Email domain appears legitimate";
 
       const features = [
         {
@@ -404,8 +409,8 @@ document.addEventListener("DOMContentLoaded", () => {
         {
           icon: "📧", label: "Email Domain Risk",
           value: emailDomain,
-          v: verdict("ok"),
-          reason: "No high-risk domain pattern detected"
+          v: verdict(emailDomainLevel),
+          reason: emailReason
         }
       ];
 
@@ -579,6 +584,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const pageVisits = parseInt(localStorage.getItem("fadila_page_visits") || "1");
       localStorage.setItem("fadila_page_visits", String(pageVisits + 1));
 
+      // login_count: incremented by your login page via localStorage.setItem("fadila_login_count", ...)
+      // If no login page, we use page load count as a proxy (already tracked as page_visits)
       const loginCount = parseInt(localStorage.getItem("fadila_login_count") || "0");
 
       const screenWidth  = scr.width  || null;
@@ -586,7 +593,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const colorDepth   = scr.colorDepth || null;
       const devicePixelRatio = window.devicePixelRatio || null;
       const hardwareConcurrency = nav.hardwareConcurrency || null;
-      const deviceMemory = nav.deviceMemory || null;
+      const deviceMemory = nav.deviceMemory !== undefined ? nav.deviceMemory : null;
       const platform     = nav.platform || null;
       const language     = nav.language || null;
       const userAgent    = nav.userAgent || null;
@@ -630,6 +637,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
 
+      // username: prefer connectedUser from login page, fallback to the email typed in the form
+      const resolvedUsername = localStorage.getItem("connectedUser") || email;
+
       lastPayload = {
         card_type:            cardType,
         card_expiry:          exp,
@@ -639,7 +649,7 @@ document.addEventListener("DOMContentLoaded", () => {
         amount:               paymentTarget ? paymentTarget.price : 10.0,
         book_title:           paymentTarget ? paymentTarget.title : "unknown",
         hour:                 hour,
-        username:             localStorage.getItem("connectedUser") || "guest",
+        username:             resolvedUsername,
         login_count:          loginCount,
         payment_attempts:     txCount,
         page_visits:          pageVisits,
