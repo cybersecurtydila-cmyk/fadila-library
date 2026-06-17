@@ -516,39 +516,14 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
-          <button id="detailsBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #3f3f46;background:none;color:#e4e4e7;cursor:pointer;font-size:13px;">Details</button>
           <button id="confirmPaymentBtn" style="padding:8px 20px;border-radius:6px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:13px;">Confirm Payment</button>
           <button id="cancelPaymentBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #3f3f46;background:none;color:#e4e4e7;cursor:pointer;font-size:13px;">Cancel</button>
-        </div>
-
-        <div id="detailsPanel" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:11px;">
-          <div style="color:#caa84b;font-weight:600;margin-bottom:8px;">🔍 Signals used by fraud detection system:</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;color:#71717a;">
-            <span>💳 Card type & pattern</span>
-            <span>📅 Card expiry date</span>
-            <span>🔐 CVV quality</span>
-            <span>🕐 Transaction hour</span>
-            <span>🌐 Browser fingerprint</span>
-            <span>📊 Payment velocity</span>
-            <span>⏱️ Session duration</span>
-            <span>🖥️ Device profile</span>
-            <span>🌍 Timezone & language</span>
-            <span>📧 Email domain risk</span>
-          </div>
-          <div style="margin-top:10px;color:#52525b;font-size:10px;">
-            These signals are automatically collected and fed into FT-Transformer → AutoInt → XGBoost pipeline to produce the fraud decision.
-          </div>
         </div>
       </div>`;
 
     document.getElementById("closePaymentModal").onclick = () => { paymentModal.style.display = "none"; };
     document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.style.display = "none"; };
-    document.getElementById("detailsBtn").onclick = () => {
-      const panel = document.getElementById("detailsPanel");
-      const btn   = document.getElementById("detailsBtn");
-      if (panel.style.display === "none") { panel.style.display = "block"; btn.textContent = "Hide Details"; }
-      else { panel.style.display = "none"; btn.textContent = "Details"; }
-    };
+
 
     document.getElementById("confirmPaymentBtn").onclick = () => {
       const name     = document.getElementById("payFullName").value.trim();
@@ -623,19 +598,28 @@ document.addEventListener("DOMContentLoaded", () => {
       const referrer  = document.referrer || null;
 
       // FIX: compute card_expired before building payload (was inline IIFE that referenced exp from closure — now explicit)
-      const expClean = exp.trim().replace(/[\s\-]/g, "");
-      const expParts = expClean.split("/");
       let cardExpired = false;
-      if (expParts.length === 2) {
-        const expMonth = parseInt(expParts[0], 10);
-        const yearRaw  = expParts[1].trim();
-        const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
-        if (!isNaN(expMonth) && !isNaN(expYear) && expMonth >= 1 && expMonth <= 12) {
-          const curYear  = now2.getFullYear();
-          const curMonth = now2.getMonth() + 1;
-          cardExpired = (expYear < curYear) || (expYear === curYear && expMonth < curMonth);
+      (function() {
+        // Normalize: strip spaces, then replace any separator (/ or -) with /
+        let normalized = exp.trim().replace(/\s/g, "").replace(/-/g, "/");
+        // Handle formats without separator: MMYY (4 chars) or MMYYYY (6 chars)
+        if (!normalized.includes("/")) {
+          if (normalized.length === 4) {
+            normalized = normalized.slice(0, 2) + "/" + normalized.slice(2); // "0125" → "01/25"
+          } else if (normalized.length === 6) {
+            normalized = normalized.slice(0, 2) + "/" + normalized.slice(2); // "012025" → "01/2025"
+          }
         }
-      }
+        const parts = normalized.split("/");
+        if (parts.length !== 2) return;
+        const expMonth = parseInt(parts[0], 10);
+        const yearRaw  = parts[1].trim();
+        const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
+        if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return;
+        const curYear  = now2.getFullYear();
+        const curMonth = now2.getMonth() + 1;
+        cardExpired = (expYear < curYear) || (expYear === curYear && expMonth < curMonth);
+      })();
 
       // username: prefer connectedUser from login page, fallback to the email typed in the form
       const resolvedUsername = localStorage.getItem("connectedUser") || email;
