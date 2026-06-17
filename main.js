@@ -102,12 +102,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ----- سلة المشتريات -----
+  // ----- سلة المشتريات (single declaration) -----
   function getCart() {
     try { return JSON.parse(localStorage.getItem("cart") || "[]"); }
     catch { return []; }
   }
   function saveCart(cart) { localStorage.setItem("cart", JSON.stringify(cart)); }
+
   function addToCart(book) {
     const cart = getCart();
     cart.push(book);
@@ -140,7 +141,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (modalCancel) modalCancel.onclick = () => modal.classList.add("hidden");
 
   // ═══════════════════════════════════════════════════════════════════════
-  //  CHANGE 1 — outer scope variable to hold last payload
+  //  outer scope variable to hold last payload
   // ═══════════════════════════════════════════════════════════════════════
   let lastPayload = null;
 
@@ -284,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <!-- SHAP -->
         ${shapHtml}
 
-        <!-- CHANGE 2 — buttons row with new Raw Features button -->
+        <!-- buttons row with Raw Features button -->
         <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
           ${d === "SUSPICIOUS" || d === "BLOCK" ? `<button id="showRawFeatures" style="padding:10px 18px;border-radius:8px;background:#18181b;color:#caa84b;font-weight:600;border:1px solid #caa84b;cursor:pointer;font-size:13px;">🔬 Why this decision?</button>` : ""}
           <button id="closeFraudResult" style="padding:10px 26px;border-radius:8px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:14px;">${d === "BLOCK" ? "Fermer" : "Valider"}</button>
@@ -295,7 +296,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("closeFraudResult").onclick = () => overlay.remove();
     overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
 
-    // CHANGE 2 continued — why this decision modal (only for SUSPICIOUS/BLOCK)
+    // why this decision modal (only for SUSPICIOUS/BLOCK)
     const rawBtn = document.getElementById("showRawFeatures");
     if (rawBtn) rawBtn.onclick = () => {
       const old2 = document.getElementById("rawFeaturesModal");
@@ -455,19 +456,28 @@ document.addEventListener("DOMContentLoaded", () => {
   function openPaymentModal(book = null) {
     paymentTarget = book;
     if (!paymentModal) return;
+
+    // FIX: ensure the modal is visible as a flex container
+    paymentModal.style.display = "flex";
+    paymentModal.style.position = "fixed";
+    paymentModal.style.inset = "0";
+    paymentModal.style.zIndex = "1000";
+    paymentModal.style.alignItems = "center";
+    paymentModal.style.justifyContent = "center";
+    paymentModal.style.background = "rgba(0,0,0,0.7)";
+    paymentModal.style.padding = "16px";
     paymentModal.classList.remove("hidden");
-    paymentModal.classList.add("flex");
 
     const now = new Date();
-    const hour = new Date().getHours();
+    const hour = now.getHours();
     const pad = n => String(n).padStart(2, "0");
     const timeStr = `${pad(now.getDate())}/${pad(now.getMonth()+1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`;
 
     paymentModal.innerHTML = `
-      <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="text-xl font-semibold">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
-          <button id="closePaymentModal" class="text-zinc-400">✕</button>
+      <div class="bg-[#0b0b0b] rounded-xl max-w-lg w-full p-6 glass" style="max-height:90vh;overflow-y:auto;background:#0b0b0b;border:1px solid #27272a;border-radius:16px;padding:24px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;">
+        <div class="flex justify-between items-center mb-4" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <h3 class="text-xl font-semibold" style="font-size:17px;font-weight:700;color:#e4e4e7;">Secure Payment ${bookTitleFor(paymentTarget)}</h3>
+          <button id="closePaymentModal" class="text-zinc-400" style="background:none;border:none;color:#a1a1aa;font-size:18px;cursor:pointer;padding:4px;">✕</button>
         </div>
 
         <div style="background:#111;border:1px solid #27272a;border-radius:8px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:#71717a;">
@@ -476,11 +486,11 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
 
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Cardholder Information</div>
-        <input id="payFullName" type="text" placeholder="Full name" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-        <input id="payEmail" type="email" placeholder="Email address" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <input id="payFullName" type="text" placeholder="Full name" style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
+        <input id="payEmail" type="email" placeholder="Email address" style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
 
         <div style="font-size:11px;color:#a1a1aa;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;margin-top:8px;">Card Details</div>
-        <select id="payCardType" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <select id="payCardType" style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
           <option value="">-- Card Type --</option>
           <option value="visa">💳 Visa</option>
           <option value="mastercard">💳 Mastercard</option>
@@ -494,16 +504,16 @@ document.addEventListener("DOMContentLoaded", () => {
           <option value="virtual">💳 Virtual Card</option>
           <option value="unknown">💳 Other</option>
         </select>
-        <input id="payCard" type="text" placeholder="Card number (ex: 4242 4242 4242 4242)" class="w-full p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-        <div class="flex gap-2">
-          <input id="payExp" type="text" placeholder="MM/YY" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
-          <input id="payCvc" type="text" placeholder="CVC" class="w-1/2 p-2 mb-2 rounded border border-zinc-700 bg-[#121212] text-white">
+        <input id="payCard" type="text" placeholder="Card number (ex: 4242 4242 4242 4242)" style="width:100%;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
+        <div style="display:flex;gap:8px;">
+          <input id="payExp" type="text" placeholder="MM/YY" style="flex:1;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
+          <input id="payCvc" type="text" placeholder="CVC" style="flex:1;padding:8px;margin-bottom:8px;border-radius:6px;border:1px solid #3f3f46;background:#121212;color:white;box-sizing:border-box;">
         </div>
 
-        <div class="mt-4 flex justify-end gap-3">
-          <button id="detailsBtn" class="px-4 py-2 rounded border border-zinc-700 text-sm">Details</button>
-          <button id="confirmPaymentBtn" class="px-4 py-2 rounded bg-[var(--gold)] text-black font-semibold">Confirm Payment</button>
-          <button id="cancelPaymentBtn" class="px-4 py-2 rounded border border-zinc-700">Cancel</button>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;">
+          <button id="detailsBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #3f3f46;background:none;color:#e4e4e7;cursor:pointer;font-size:13px;">Details</button>
+          <button id="confirmPaymentBtn" style="padding:8px 20px;border-radius:6px;background:#caa84b;color:#000;font-weight:700;border:none;cursor:pointer;font-size:13px;">Confirm Payment</button>
+          <button id="cancelPaymentBtn" style="padding:8px 16px;border-radius:6px;border:1px solid #3f3f46;background:none;color:#e4e4e7;cursor:pointer;font-size:13px;">Cancel</button>
         </div>
 
         <div id="detailsPanel" style="display:none;margin-top:12px;background:#0d0d0d;border:1px solid #27272a;border-radius:8px;padding:12px;font-size:11px;">
@@ -526,8 +536,8 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>`;
 
-    document.getElementById("closePaymentModal").onclick = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
-    document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.classList.add("hidden"); paymentModal.classList.remove("flex"); };
+    document.getElementById("closePaymentModal").onclick = () => { paymentModal.style.display = "none"; };
+    document.getElementById("cancelPaymentBtn").onclick  = () => { paymentModal.style.display = "none"; };
     document.getElementById("detailsBtn").onclick = () => {
       const panel = document.getElementById("detailsPanel");
       const btn   = document.getElementById("detailsBtn");
@@ -550,7 +560,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const cardClean = card.replace(/\s+/g, "");
 
-      const emailDomain = email.includes("@") ? email.split("@")[1].toLowerCase() : "unknown";
       const sessionKey = "fadila_tx_count";
       const txCount = parseInt(localStorage.getItem(sessionKey) || "0") + 1;
       localStorage.setItem(sessionKey, String(txCount));
@@ -559,8 +568,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const scr = window.screen   || {};
       const now2 = new Date();
 
-      const sessionStart = parseInt(localStorage.getItem("fadila_session_start") || String(Date.now()));
-      if (!localStorage.getItem("fadila_session_start")) localStorage.setItem("fadila_session_start", String(sessionStart));
+      // FIX: session start — only reset if more than 30 min old (not unbounded)
+      const existingStart = parseInt(localStorage.getItem("fadila_session_start") || "0");
+      const sessionStart = (existingStart && (Date.now() - existingStart) < 1800000)
+        ? existingStart
+        : Date.now();
+      localStorage.setItem("fadila_session_start", String(sessionStart));
       const sessionDuration = Math.round((Date.now() - sessionStart) / 1000);
 
       const pageVisits = parseInt(localStorage.getItem("fadila_page_visits") || "1");
@@ -602,27 +615,25 @@ document.addEventListener("DOMContentLoaded", () => {
       const screenRes = (screenWidth && screenHeight) ? `${screenWidth}x${screenHeight}` : null;
       const referrer  = document.referrer || null;
 
-      const btn = document.getElementById("confirmPaymentBtn");
-      btn.disabled = true;
-      btn.textContent = "⏳ Vérification...";
+      // FIX: compute card_expired before building payload (was inline IIFE that referenced exp from closure — now explicit)
+      const expClean = exp.trim().replace(/[\s\-]/g, "");
+      const expParts = expClean.split("/");
+      let cardExpired = false;
+      if (expParts.length === 2) {
+        const expMonth = parseInt(expParts[0], 10);
+        const yearRaw  = expParts[1].trim();
+        const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
+        if (!isNaN(expMonth) && !isNaN(expYear) && expMonth >= 1 && expMonth <= 12) {
+          const curYear  = now2.getFullYear();
+          const curMonth = now2.getMonth() + 1;
+          cardExpired = (expYear < curYear) || (expYear === curYear && expMonth < curMonth);
+        }
+      }
 
-      // CHANGE 1 — store payload before fetch
       lastPayload = {
         card_type:            cardType,
         card_expiry:          exp,
-        card_expired:         (() => {
-          const clean = exp.trim().replace(/[\s\-]/g, "");
-          const parts = clean.split("/");
-          if (parts.length !== 2) return false; // unreadable = don't assume expired
-          const expMonth = parseInt(parts[0], 10);
-          const yearRaw  = parts[1].trim();
-          const expYear  = yearRaw.length === 2 ? 2000 + parseInt(yearRaw, 10) : parseInt(yearRaw, 10);
-          if (isNaN(expMonth) || isNaN(expYear) || expMonth < 1 || expMonth > 12) return false;
-          const now3 = new Date();
-          const curYear  = now3.getFullYear();
-          const curMonth = now3.getMonth() + 1;
-          return (expYear < curYear) || (expYear === curYear && expMonth < curMonth);
-        })(),
+        card_expired:         cardExpired,
         cvv:                  cvc,
         card_last4:           cardClean.slice(-4),
         amount:               paymentTarget ? paymentTarget.price : 10.0,
@@ -654,24 +665,34 @@ document.addEventListener("DOMContentLoaded", () => {
         network_type:         networkType
       };
 
+      const btn = document.getElementById("confirmPaymentBtn");
+      btn.disabled = true;
+      btn.textContent = "⏳ Vérification...";
+
       fetch("https://diladila-fadila-fraud-api.hf.space/api/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(lastPayload)
       })
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(data => {
-        paymentModal.classList.add("hidden");
-        paymentModal.classList.remove("flex");
+        paymentModal.style.display = "none";
         showFraudResult(data, cardType);
         if (data.decision === "OK") {
-          const cart = getCart();
-          if (paymentTarget) { cart.push(paymentTarget); saveCart(cart); }
+          if (paymentTarget) {
+            const cart = getCart();
+            cart.push(paymentTarget);
+            saveCart(cart);
+          }
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        console.error("Fraud API error:", err);
         btn.disabled = false;
-        btn.textContent = "Confirmer le paiement";
+        btn.textContent = "Confirm Payment";
         showToast("❌ Erreur de connexion au serveur. Vérifiez que le backend est démarré.", "info");
       });
     };
@@ -692,9 +713,6 @@ document.addEventListener("DOMContentLoaded", () => {
       else renderBooks(res);
     };
   }
-
-  function getCart() { return JSON.parse(localStorage.getItem("cart") || "[]"); }
-  function saveCart(c) { localStorage.setItem("cart", JSON.stringify(c)); }
 
   renderBooks();
 });
